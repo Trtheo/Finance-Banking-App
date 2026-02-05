@@ -1,0 +1,24 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "expo": "^54.0.33",
+    "expo-status-bar": "^3.0.9",
+    "react-native": "^0.83.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.13",
+    "@types/react-native": "^0.72.8",
+    "typescript": "^5.9.3"
+  }
+}
