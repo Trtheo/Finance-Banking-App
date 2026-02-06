@@ -17,7 +17,7 @@ const transactions = [
     { id: '3', title: 'Electric Bill', amount: '- RWF 15,000', date: 'Feb 4', type: 'debit' },
 ];
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }: any) {
     const [activeTab, setActiveTab] = useState('Home');
     const [menuVisible, setMenuVisible] = useState(false);
 
@@ -56,13 +56,13 @@ export default function DashboardScreen() {
 
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.actionsContainer}>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('FundTransfer')}>
                     <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
                         <Ionicons name="send" size={24} color="#2196F3" />
                     </View>
                     <Text style={styles.actionText}>Transfer</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Transactions')}>
                     <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
                         <Ionicons name="time" size={24} color="#FF9800" />
                     </View>
@@ -97,7 +97,9 @@ export default function DashboardScreen() {
                 setActiveTab('Home');
                 return renderDashboardContent();
             case 'Transactions':
-                return <View style={styles.tabContent}><Text style={styles.tabText}>Transactions Screen</Text></View>;
+                navigation.navigate('Transactions');
+                setActiveTab('Home');
+                return renderDashboardContent();
             case 'Wallet':
                 return <View style={styles.tabContent}><Text style={styles.tabText}>Wallet Screen</Text></View>;
             case 'Profile':
@@ -190,7 +192,13 @@ export default function DashboardScreen() {
                     <React.Fragment key={tab.name}>
                         <TouchableOpacity 
                             style={styles.footerTab}
-                            onPress={() => setActiveTab(tab.name)}
+                            onPress={() => {
+                                if (tab.name === 'Transactions') {
+                                    navigation.navigate('Transactions');
+                                } else {
+                                    setActiveTab(tab.name);
+                                }
+                            }}
                         >
                             <Ionicons 
                                 name={tab.icon as any} 
