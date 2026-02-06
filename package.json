@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "expo-linear-gradient": "^15.0.8"
+    "expo-linear-gradient": "^15.0.8",
+    "express": "^5.2.1",
+    "mongoose": "^9.1.6"
   }
 }
