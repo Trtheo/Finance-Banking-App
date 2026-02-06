@@ -1,0 +1,61 @@
+# Global
+node_modules/
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Web / Build
+build/
+dist/
+.next/
+out/
+web-build/
+
+# Expo / React Native
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+android/*.iml
+android/app/*.iml
+
+# iOS
+ios/Pods/
+ios/build/
+ios/*.xcworkspace
+ios/*.xcodeproj/project.xcworkspace
+ios/*.xcodeproj/xcuserdata
+
+# Backend / General Node
+coverage/
+logs/
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+lib-cov
+html-cov
+
+# TypeScript
+*.tsbuildinfo

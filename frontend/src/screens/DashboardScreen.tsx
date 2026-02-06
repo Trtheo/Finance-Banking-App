@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Dummy data for transactions
 const transactions = [
-    { id: '1', title: 'Transfer to John', amount: '- RWF 5,000', date: 'Today', type: 'debit' },
+    { id: '1', title: 'Transfer to Johnss', amount: '- RWF 5,000', date: 'Today', type: 'debit' },
     { id: '2', title: 'Salary Deposit', amount: '+ RWF 1,500,000', date: 'Yesterday', type: 'credit' },
     { id: '3', title: 'Electric Bill', amount: '- RWF 15,000', date: 'Feb 4', type: 'debit' },
 ];
