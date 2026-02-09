@@ -7,6 +7,10 @@ const app: Express = express();
 app.use(cors());
 app.use(express.json());
 
+// Swagger Documentation
+import { swaggerUi, swaggerSpec } from './config/swagger';
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
     res.send('Nexpay Backend API is Running');
