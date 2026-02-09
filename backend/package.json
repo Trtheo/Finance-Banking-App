@@ -22,7 +22,10 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+<<<<<<< HEAD
     "cors": "^2.8.6",
+=======
+>>>>>>> f803abc0ec425f5b063789b2be7c1b0501e4c75a
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "mongoose": "^9.1.6"
