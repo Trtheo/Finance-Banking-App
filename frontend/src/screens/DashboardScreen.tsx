@@ -102,7 +102,7 @@ export default function DashboardScreen({ navigation }: any) {
                 setActiveTab('Home');
                 return renderDashboardContent();
             case 'Cards':
-                return <WalletScreen />;
+                return <WalletScreen navigation={navigation} />;
             case 'Profile':
                 return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
             default:

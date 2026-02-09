@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function WalletScreen() {
+export default function WalletScreen({ navigation }: any) {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -65,7 +65,7 @@ export default function WalletScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.addButton}>
+                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddCard')}>
                     <Ionicons name="add" size={20} color="#000" />
                     <Text style={styles.addButtonText}>Add New Card</Text>
                 </TouchableOpacity>
