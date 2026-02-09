@@ -12,8 +12,9 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Nexpay Backend API is Running');
 });
 
-// Routes (To be imported later)
-// app.use('/api/auth', authRoutes);
+import authRoutes from './routes/authRoutes';
+
+app.use('/api/auth', authRoutes);
 // app.use('/api/wallet', walletRoutes);
 // app.use('/api/transactions', transactionRoutes);
 
