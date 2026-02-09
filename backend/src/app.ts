@@ -1,8 +1,20 @@
-import express from "express";
-import { Request ,Response } from "express";
+import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
 
+const app: Express = express();
 
-export const app = express();
-app.get("/",(req:Request ,res:Response)=>{
-    return res.send("welcome to Banking App");
-})
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Basic Route
+app.get('/', (req: Request, res: Response) => {
+    res.send('Nexpay Backend API is Running');
+});
+
+// Routes (To be imported later)
+// app.use('/api/auth', authRoutes);
+// app.use('/api/wallet', walletRoutes);
+// app.use('/api/transactions', transactionRoutes);
+
+export { app };
