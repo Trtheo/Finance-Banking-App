@@ -58,11 +58,11 @@ export default function TabNavigator() {
                 }}
             />
             <Tab.Screen
-                name="Wallet"
+                name="Cards"
                 component={WalletScreen}
                 options={{
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="wallet" size={size} color={color} />
+                        <Ionicons name="card" size={size} color={color} />
                     ),
                 }}
             />

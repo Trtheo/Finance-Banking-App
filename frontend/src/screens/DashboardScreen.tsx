@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+// import WalletScreen from './WalletScreen';
 import WalletScreen from './WalletScreen';
 
 const transactions = [
@@ -114,6 +115,7 @@ export default function DashboardScreen({ navigation }: any) {
         { name: 'Home', icon: 'home' },
         { name: 'Payments', icon: 'card' },
         { name: 'Transactions', icon: 'list' },
+        { name: 'Cards', icon: 'card' },
         { name: 'Cards', icon: 'card' },
         { name: 'Profile', icon: 'person' },
     ];
