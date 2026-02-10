@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import WalletScreen from './WalletScreen';
 
 const transactions = [
     { id: '1', title: 'Transfer to Johnss', amount: '- RWF 5,000', date: 'Today', type: 'debit' },
@@ -86,6 +87,38 @@ export default function DashboardScreen({ navigation }: any) {
         </ScrollView>
     );
 
+<<<<<<< HEAD
+=======
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'Home':
+                return renderDashboardContent();
+            case 'Payments':
+                setMenuVisible(true);
+                setActiveTab('Home');
+                return renderDashboardContent();
+            case 'Transactions':
+                navigation.navigate('Transactions');
+                setActiveTab('Home');
+                return renderDashboardContent();
+            case 'Cards':
+                return <WalletScreen />;
+            case 'Profile':
+                return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
+            default:
+                return renderDashboardContent();
+        }
+    };
+
+    const tabs = [
+        { name: 'Home', icon: 'home' },
+        { name: 'Payments', icon: 'card' },
+        { name: 'Transactions', icon: 'list' },
+        { name: 'Cards', icon: 'card' },
+        { name: 'Profile', icon: 'person' },
+    ];
+
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>

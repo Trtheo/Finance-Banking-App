@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function WalletScreen() {
+export default function CardsScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
