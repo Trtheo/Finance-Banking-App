@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+// import WalletScreen from './WalletScreen';
 import WalletScreen from './WalletScreen';
 
 const transactions = [
@@ -102,7 +103,7 @@ export default function DashboardScreen({ navigation }: any) {
                 setActiveTab('Home');
                 return renderDashboardContent();
             case 'Cards':
-                return <WalletScreen />;
+                return <WalletScreen navigation={navigation} route={{}} />;
             case 'Profile':
                 return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
             default:
@@ -114,6 +115,7 @@ export default function DashboardScreen({ navigation }: any) {
         { name: 'Home', icon: 'home' },
         { name: 'Payments', icon: 'card' },
         { name: 'Transactions', icon: 'list' },
+        { name: 'Cards', icon: 'card' },
         { name: 'Cards', icon: 'card' },
         { name: 'Profile', icon: 'person' },
     ];

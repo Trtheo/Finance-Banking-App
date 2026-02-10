@@ -1,10 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+<<<<<<< HEAD
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function WalletScreen() {
+export default function WalletScreen({ navigation }: any) {
+    const handleCardPress = (cardData: any) => {
+        console.log('Card pressed, navigating to CardDetails');
+        console.log('Navigation object:', navigation);
+        if (navigation && navigation.navigate) {
+            navigation.navigate('CardDetails', cardData);
+        } else {
+            Alert.alert('Navigation Error', 'Navigation object is not available');
+        }
+    };
+=======
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -15,16 +32,31 @@ export default function WalletScreen() {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+<<<<<<< HEAD
+                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
+                    cardType: 'Platinum Card',
+                    cardNumber: '•••• •••• •••• 3014',
+                    balance: '$317,286.00',
+                    cardholderName: 'Michael John',
+                    expiryDate: '03/29',
+                    colors: ['#2C2C2C', '#1A1A1A']
+                })}>
+=======
                 {/* Platinum Card */}
                 <TouchableOpacity style={styles.cardSection}>
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Platinum Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
                     </View>
+<<<<<<< HEAD
+                    <LinearGradient colors={['#2C2C2C', '#1A1A1A']} style={styles.card}>
+=======
                     <LinearGradient
                         colors={['#2C2C2C', '#1A1A1A']}
                         style={styles.card}
                     >
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                         <View style={styles.cardTop}>
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <View style={styles.chipIcon} />
@@ -44,16 +76,31 @@ export default function WalletScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
 
+<<<<<<< HEAD
+                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
+                    cardType: 'Gold Card',
+                    cardNumber: '•••• •••• •••• 8762',
+                    balance: '$72,952.84',
+                    cardholderName: 'Michael John',
+                    expiryDate: '07/28',
+                    colors: ['#D4AF37', '#B8941F', '#8B7355']
+                })}>
+=======
                 {/* Gold Card */}
                 <TouchableOpacity style={styles.cardSection}>
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Gold Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
                     </View>
+<<<<<<< HEAD
+                    <LinearGradient colors={['#D4AF37', '#B8941F', '#8B7355']} style={styles.card}>
+=======
                     <LinearGradient
                         colors={['#D4AF37', '#B8941F', '#8B7355']}
                         style={styles.card}
                     >
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                         <View style={styles.cardTop}>
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <Text style={styles.visaLogo}>VISA</Text>
@@ -73,8 +120,12 @@ export default function WalletScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
 
+<<<<<<< HEAD
+                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddCard')}>
+=======
                 {/* Add New Card Button */}
                 <TouchableOpacity style={styles.addButton}>
+>>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <Ionicons name="add" size={20} color="#000" />
                     <Text style={styles.addButtonText}>Add New Card</Text>
                 </TouchableOpacity>
