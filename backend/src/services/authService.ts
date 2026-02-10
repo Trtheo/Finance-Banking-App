@@ -91,18 +91,43 @@ export const loginUser = async (loginData: any) => {
     });
 
     // Send OTP email
+    let emailSent = false;
+    let emailError = '';
+    
     try {
         await sendLoginOtp(user.email, user.fullName, otp);
-    } catch (error) {
-        console.error('Failed to send OTP email:', error);
-        throw new Error('Failed to send OTP email');
+        emailSent = true;
+        console.log(`✅ OTP sent successfully to ${user.email}`);
+    } catch (error: any) {
+        console.error(`❌ Failed to send OTP email to ${user.email}:`, error.message);
+        emailError = error.message;
     }
 
-    return {
+    // Return response with OTP status
+    // In development, include test OTP for debugging
+    const response: any = {
         _id: user._id.toString(),
         email: user.email,
-        message: 'OTP has been sent to your email',
+        message: emailSent 
+            ? 'OTP has been sent to your email' 
+            : 'Credentials valid, but email sending failed. Please check server logs.',
+        emailSent,
     };
+
+    // Add test OTP in development mode only
+    if (process.env.NODE_ENV !== 'production') {
+        response.testOtp = otp; // For development/testing only
+        if (emailError) {
+            response.emailError = emailError;
+        }
+    }
+
+    // Throw error only if email failed in production
+    if (!emailSent && process.env.NODE_ENV === 'production') {
+        throw new Error(`Email service error: ${emailError}`);
+    }
+
+    return response;
 };
 
 // Verify Login OTP and get token
