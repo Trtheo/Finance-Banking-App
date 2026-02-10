@@ -49,19 +49,19 @@ export const registerUser = async (userData: any) => {
             currency: 'RWF',
         });
 
-        // Send welcome email
-        try {
-            await sendWelcomeEmail(user.email, user.fullName, accountNumber);
-        } catch (error) {
-            console.error('Failed to send welcome email:', error);
-            // Don't throw error, just log it - we don't want to block registration
-        }
+        // Send welcome email in the background (non-blocking)
+        sendWelcomeEmail(user.email, user.fullName, accountNumber)
+            .catch((error) => {
+                console.error('⚠️  Welcome email failed (non-critical):', error.message);
+                // Don't propagate error - email is not critical for registration
+            });
 
         return {
             _id: user._id.toString(),
             fullName: user.fullName,
             email: user.email,
             token: generateToken(user._id.toString()),
+            message: 'Registration successful! Welcome email may take a moment to arrive.',
         };
     } else {
         throw new Error('Invalid user data');
@@ -90,41 +90,25 @@ export const loginUser = async (loginData: any) => {
         loginOtpExpires: otpExpires,
     });
 
-    // Send OTP email
-    let emailSent = false;
-    let emailError = '';
-    
-    try {
-        await sendLoginOtp(user.email, user.fullName, otp);
-        emailSent = true;
-        console.log(`✅ OTP sent successfully to ${user.email}`);
-    } catch (error: any) {
-        console.error(`❌ Failed to send OTP email to ${user.email}:`, error.message);
-        emailError = error.message;
-    }
+    // Send OTP email in the background (non-blocking)
+    // Don't await or throw - we want login to succeed even if email fails
+    sendLoginOtp(user.email, user.fullName, otp)
+        .catch((error) => {
+            console.error('⚠️  OTP email failed (still saved in DB):', error.message);
+            // Email failed but OTP is saved in database for verification
+        });
 
-    // Return response with OTP status
-    // In development, include test OTP for debugging
+    // Return immediately with OTP info
     const response: any = {
         _id: user._id.toString(),
         email: user.email,
-        message: emailSent 
-            ? 'OTP has been sent to your email' 
-            : 'Credentials valid, but email sending failed. Please check server logs.',
-        emailSent,
+        message: 'OTP sent to your email. Please check spam folder if not received.',
+        success: true,
     };
 
     // Add test OTP in development mode only
     if (process.env.NODE_ENV !== 'production') {
-        response.testOtp = otp; // For development/testing only
-        if (emailError) {
-            response.emailError = emailError;
-        }
-    }
-
-    // Throw error only if email failed in production
-    if (!emailSent && process.env.NODE_ENV === 'production') {
-        throw new Error(`Email service error: ${emailError}`);
+        response.testOtp = otp; // For local testing only
     }
 
     return response;
