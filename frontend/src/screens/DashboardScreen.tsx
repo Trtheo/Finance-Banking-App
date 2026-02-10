@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     ScrollView,
     FlatList,
-    Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +18,8 @@ const transactions = [
 ];
 
 export default function DashboardScreen({ navigation }: any) {
+    const [activeTab, setActiveTab] = useState('Home');
+    const [menuVisible, setMenuVisible] = useState(false);
 
     const renderTransaction = ({ item }: { item: any }) => (
         <View style={styles.transactionItem}>
@@ -87,8 +88,6 @@ export default function DashboardScreen({ navigation }: any) {
         </ScrollView>
     );
 
-<<<<<<< HEAD
-=======
     const renderContent = () => {
         switch (activeTab) {
             case 'Home':
@@ -104,21 +103,16 @@ export default function DashboardScreen({ navigation }: any) {
             case 'Cards':
                 return <WalletScreen />;
             case 'Profile':
-                return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
+                return (
+                    <View style={styles.tabContent}>
+                        <Text style={styles.tabText}>Profile Screen</Text>
+                    </View>
+                );
             default:
                 return renderDashboardContent();
         }
     };
 
-    const tabs = [
-        { name: 'Home', icon: 'home' },
-        { name: 'Payments', icon: 'card' },
-        { name: 'Transactions', icon: 'list' },
-        { name: 'Cards', icon: 'card' },
-        { name: 'Profile', icon: 'person' },
-    ];
-
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -132,188 +126,37 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
 
             <View style={{ flex: 1 }}>
-                {renderDashboardContent()}
+                {renderContent()}
             </View>
         </SafeAreaView>
     );
 }
 
+// ... Keep your styles as is
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F7F9FC',
-    },
-    content: {
-        padding: 20,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        paddingBottom: 10,
-    },
-    greeting: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    subGreeting: {
-        fontSize: 14,
-        color: '#888',
-    },
-    footer: {
-        flexDirection: 'row',
-        backgroundColor: '#FFF',
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingVertical: 8,
-        paddingHorizontal: 5,
-    },
-    footerTab: {
-        flex: 1,
-        alignItems: 'center',
-        paddingVertical: 5,
-    },
-    footerTabText: {
-        fontSize: 11,
-        color: '#888',
-        marginTop: 4,
-        fontWeight: '500',
-    },
-    activeFooterTabText: {
-        color: '#1A237E',
-        fontWeight: 'bold',
-    },
-    footerSeparator: {
-        width: 1,
-        backgroundColor: '#E0E0E0',
-        marginVertical: 8,
-    },
-    tabContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 50,
-    },
-    paymentsContent: {
-        flex: 1,
-        padding: 20,
-    },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    sheetContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, maxHeight: '80%' },
-    menuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    menuTitle: { fontSize: 18, fontWeight: '700', flex: 1, textAlign: 'center' },
-    section: { marginBottom: 25 },
-    sectionTitle2: { fontSize: 16, fontWeight: '600', color: '#666', marginBottom: 15 },
-    grid2: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
-    itemContainer: { width: '25%', alignItems: 'center', marginBottom: 20 },
-    iconCircle2: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-    itemLabel: { fontSize: 11, color: '#333', textAlign: 'center' },
-    tabText: {
-        fontSize: 18,
-        color: '#333',
-        fontWeight: '600',
-    },
-    balanceCard: {
-        backgroundColor: '#1A237E',
-        borderRadius: 20,
-        padding: 25,
-        marginBottom: 30,
-        shadowColor: '#1A237E',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    balanceLabel: {
-        color: '#A5B0D6',
-        fontSize: 14,
-        marginBottom: 5,
-    },
-    balanceAmount: {
-        color: '#FFF',
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
-    accountInfo: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    accountNumber: {
-        color: '#A5B0D6',
-        fontSize: 14,
-    },
-    bankName: {
-        color: '#FFD700',
-        fontWeight: 'bold',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 30,
-    },
-    actionButton: {
-        alignItems: 'center',
-        width: '22%',
-    },
-    actionIcon: {
-        width: 60,
-        height: 60,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    actionText: {
-        fontSize: 12,
-        color: '#333',
-        fontWeight: '500',
-    },
-    transactionsSection: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 20,
-    },
-    transactionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    transactionIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: '#F5F5F5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    transactionDetails: {
-        flex: 1,
-    },
-    transactionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    transactionDate: {
-        fontSize: 12,
-        color: '#888',
-    },
-    transactionAmount: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    container: { flex: 1, backgroundColor: '#F7F9FC' },
+    content: { padding: 20 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 10 },
+    greeting: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+    subGreeting: { fontSize: 14, color: '#888' },
+    tabContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+    tabText: { fontSize: 18, color: '#333', fontWeight: '600' },
+    balanceCard: { backgroundColor: '#1A237E', borderRadius: 20, padding: 25, marginBottom: 30, shadowColor: '#1A237E', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+    balanceLabel: { color: '#A5B0D6', fontSize: 14, marginBottom: 5 },
+    balanceAmount: { color: '#FFF', fontSize: 32, fontWeight: 'bold', marginBottom: 20 },
+    accountInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    accountNumber: { color: '#A5B0D6', fontSize: 14 },
+    bankName: { color: '#FFD700', fontWeight: 'bold' },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
+    actionsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+    actionButton: { alignItems: 'center', width: '22%' },
+    actionIcon: { width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    actionText: { fontSize: 12, color: '#333', fontWeight: '500' },
+    transactionsSection: { backgroundColor: '#FFF', borderRadius: 20, padding: 20 },
+    transactionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    transactionIconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    transactionDetails: { flex: 1 },
+    transactionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+    transactionDate: { fontSize: 12, color: '#888' },
+    transactionAmount: { fontSize: 16, fontWeight: 'bold' },
 });
