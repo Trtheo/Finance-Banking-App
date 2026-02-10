@@ -1,5 +1,4 @@
 import React from 'react';
-<<<<<<< HEAD
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,12 +14,6 @@ export default function WalletScreen({ navigation }: any) {
             Alert.alert('Navigation Error', 'Navigation object is not available');
         }
     };
-=======
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
 
     return (
         <SafeAreaView style={styles.container}>
@@ -32,7 +25,6 @@ import { Ionicons } from '@expo/vector-icons';
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-<<<<<<< HEAD
                 <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
                     cardType: 'Platinum Card',
                     cardNumber: '•••• •••• •••• 3014',
@@ -41,22 +33,11 @@ import { Ionicons } from '@expo/vector-icons';
                     expiryDate: '03/29',
                     colors: ['#2C2C2C', '#1A1A1A']
                 })}>
-=======
-                {/* Platinum Card */}
-                <TouchableOpacity style={styles.cardSection}>
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Platinum Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
                     </View>
-<<<<<<< HEAD
                     <LinearGradient colors={['#2C2C2C', '#1A1A1A']} style={styles.card}>
-=======
-                    <LinearGradient
-                        colors={['#2C2C2C', '#1A1A1A']}
-                        style={styles.card}
-                    >
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                         <View style={styles.cardTop}>
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <View style={styles.chipIcon} />
@@ -76,7 +57,6 @@ import { Ionicons } from '@expo/vector-icons';
                     </LinearGradient>
                 </TouchableOpacity>
 
-<<<<<<< HEAD
                 <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
                     cardType: 'Gold Card',
                     cardNumber: '•••• •••• •••• 8762',
@@ -85,22 +65,11 @@ import { Ionicons } from '@expo/vector-icons';
                     expiryDate: '07/28',
                     colors: ['#D4AF37', '#B8941F', '#8B7355']
                 })}>
-=======
-                {/* Gold Card */}
-                <TouchableOpacity style={styles.cardSection}>
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Gold Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
                     </View>
-<<<<<<< HEAD
                     <LinearGradient colors={['#D4AF37', '#B8941F', '#8B7355']} style={styles.card}>
-=======
-                    <LinearGradient
-                        colors={['#D4AF37', '#B8941F', '#8B7355']}
-                        style={styles.card}
-                    >
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                         <View style={styles.cardTop}>
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <Text style={styles.visaLogo}>VISA</Text>
@@ -120,12 +89,7 @@ import { Ionicons } from '@expo/vector-icons';
                     </LinearGradient>
                 </TouchableOpacity>
 
-<<<<<<< HEAD
                 <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddCard')}>
-=======
-                {/* Add New Card Button */}
-                <TouchableOpacity style={styles.addButton}>
->>>>>>> ba5e2b27010af1aaf3a85cff80232b79b109b08c
                     <Ionicons name="add" size={20} color="#000" />
                     <Text style={styles.addButtonText}>Add New Card</Text>
                 </TouchableOpacity>

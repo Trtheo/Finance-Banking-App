@@ -20,7 +20,7 @@ export default function LoginScreen({ navigation }) {
     const handleLogin = () => {
         console.log('Logging in with:', { identifier, password });
         // TODO: Validate credentials
-        navigation.replace('Dashboard');
+        navigation.replace('Main');
     };
 
     return (
