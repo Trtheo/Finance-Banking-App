@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ export default function CardDetailsScreen({ navigation, route }: any) {
     const [foreignTransactions, setForeignTransactions] = useState(false);
     const [onlineTransactions, setOnlineTransactions] = useState(true);
     const [activeTab, setActiveTab] = useState('detail');
+    const [modalVisible, setModalVisible] = useState(false);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -65,7 +66,7 @@ export default function CardDetailsScreen({ navigation, route }: any) {
                 <View style={styles.limitSection}>
                     <View style={styles.limitHeader}>
                         <Text style={styles.sectionTitle}>Limit Settings</Text>
-                        <TouchableOpacity style={styles.editButton}>
+                        <TouchableOpacity style={styles.editButton} onPress={() => setModalVisible(true)}>
                             <Ionicons name="create-outline" size={16} color="#FFF" />
                             <Text style={styles.editButtonText}>Edit</Text>
                         </TouchableOpacity>
@@ -129,6 +130,72 @@ export default function CardDetailsScreen({ navigation, route }: any) {
                     </View>
                 </View>
             </ScrollView>
+
+            <Modal visible={modalVisible} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Card Settings</Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#000" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.modalContent}>
+                            <Text style={styles.sectionLabel}>Card Info</Text>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Card Type</Text>
+                                <Text style={styles.infoValue}>Platinum</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Account Holder</Text>
+                                <Text style={styles.infoValue}>{cardholderName}</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Account Number</Text>
+                                <Text style={styles.infoValue}>3789 1054 9763 3014</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Expiry Date</Text>
+                                <Text style={styles.infoValue}>{expiryDate}</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>CVV</Text>
+                                <Text style={styles.infoValue}>475</Text>
+                            </View>
+
+                            <TouchableOpacity style={styles.actionRow}>
+                                <View style={styles.actionLeft}>
+                                    <Ionicons name="key-outline" size={20} color="#666" />
+                                    <Text style={styles.actionText}>Change PIN Number</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#999" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.actionRow}>
+                                <View style={styles.actionLeft}>
+                                    <Ionicons name="lock-closed-outline" size={20} color="#666" />
+                                    <Text style={styles.actionText}>Lock Card Temporarily</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#999" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.actionRow}>
+                                <View style={styles.actionLeft}>
+                                    <Ionicons name="close-circle-outline" size={20} color="#666" />
+                                    <Text style={styles.actionText}>Block Card Permanently</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#999" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -309,5 +376,75 @@ const styles = StyleSheet.create({
     },
     inactiveStatus: {
         color: '#F44336',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        backgroundColor: '#FFF',
+        borderTopLeftRadius: 25,
+        borderTopRightRadius: 25,
+        paddingBottom: 30,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    modalContent: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+    },
+    sectionLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#000',
+        marginBottom: 15,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    infoLabel: {
+        fontSize: 14,
+        color: '#999',
+    },
+    infoValue: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#000',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+        marginTop: 10,
+    },
+    actionLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    actionText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#000',
     },
 });
