@@ -5,13 +5,14 @@ import DashboardScreen from '../screens/DashboardScreen';
 import PaymentsScreen from '../screens/PaymentsScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import WalletScreen from '../screens/WalletScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import ProfileStackNavigation from './ProfileStackNavigation';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
     return (
         <Tab.Navigator
+            id="BottomTabs"
             screenOptions={{
                 headerShown: false,
                 tabBarActiveTintColor: '#1A237E',
@@ -68,7 +69,7 @@ export default function TabNavigator() {
             />
             <Tab.Screen
                 name="Profile"
-                component={ProfileScreen}
+                component={ProfileStackNavigation}
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="person" size={size} color={color} />

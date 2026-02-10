@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     ScrollView,
     FlatList,
-    Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +45,7 @@ export default function DashboardScreen({ navigation }: any) {
     );
 
     const renderDashboardContent = () => (
-        <>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.balanceCard}>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
                 <Text style={styles.balanceAmount}>RWF 2,450,000</Text>
@@ -87,7 +86,7 @@ export default function DashboardScreen({ navigation }: any) {
                     scrollEnabled={false}
                 />
             </View>
-        </>
+        </ScrollView>
     );
 
     const renderContent = () => {
@@ -105,7 +104,11 @@ export default function DashboardScreen({ navigation }: any) {
             case 'Cards':
                 return <WalletScreen navigation={navigation} route={{}} />;
             case 'Profile':
-                return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
+                return (
+                    <View style={styles.tabContent}>
+                        <Text style={styles.tabText}>Profile Screen</Text>
+                    </View>
+                );
             default:
                 return renderDashboardContent();
         }
@@ -127,278 +130,43 @@ export default function DashboardScreen({ navigation }: any) {
                     <Text style={styles.greeting}>Hello, Michael</Text>
                     <Text style={styles.subGreeting}>Welcome back</Text>
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                     <Ionicons name="person-circle-outline" size={40} color="#333" />
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <View style={{ flex: 1 }}>
                 {renderContent()}
-            </ScrollView>
-
-            <Modal visible={menuVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.sheetContainer}>
-                        <View style={styles.menuHeader}>
-                            <Text style={styles.menuTitle}>Menu</Text>
-                            <TouchableOpacity onPress={() => setMenuVisible(false)}>
-                                <Ionicons name="close" size={24} color="#000" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {[
-                                { title: 'Payments', data: [
-                                    { id: '1', label: 'Internet', icon: 'wifi' },
-                                    { id: '2', label: 'Electricity', icon: 'flash' },
-                                    { id: '3', label: 'Water', icon: 'water' },
-                                    { id: '4', label: 'Television', icon: 'tv' },
-                                    { id: '5', label: 'Games', icon: 'game-controller' },
-                                    { id: '6', label: 'Tax', icon: 'receipt' },
-                                    { id: '7', label: 'Lifestyle', icon: 'bag' },
-                                    { id: '8', label: 'VA Number', icon: 'phone-portrait' },
-                                ]},
-                                { title: 'Insurance', data: [
-                                    { id: '9', label: 'Health', icon: 'heart' },
-                                    { id: '10', label: 'Car', icon: 'car' },
-                                    { id: '11', label: 'Motorcycle', icon: 'bicycle' },
-                                    { id: '12', label: 'Property', icon: 'business' },
-                                ]},
-                                { title: 'Others', data: [
-                                    { id: '13', label: 'Top Up', icon: 'wallet' },
-                                    { id: '14', label: 'Investment', icon: 'trending-up' },
-                                    { id: '15', label: 'Credit', icon: 'card' },
-                                    { id: '16', label: 'Donate', icon: 'gift' },
-                                ]},
-                            ].map((section) => (
-                                <View key={section.title} style={styles.section}>
-                                    <Text style={styles.sectionTitle2}>{section.title}</Text>
-                                    <View style={styles.grid2}>
-                                        {section.data.map((item) => (
-                                            <TouchableOpacity key={item.id} style={styles.itemContainer}>
-                                                <View style={styles.iconCircle2}>
-                                                    <Ionicons name={item.icon as any} size={24} color="#FFD700" />
-                                                </View>
-                                                <Text style={styles.itemLabel}>{item.label}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-
-            <View style={styles.footer}>
-                {tabs.map((tab, index) => (
-                    <React.Fragment key={tab.name}>
-                        <TouchableOpacity 
-                            style={styles.footerTab}
-                            onPress={() => {
-                                if (tab.name === 'Transactions') {
-                                    navigation.navigate('Transactions');
-                                } else {
-                                    setActiveTab(tab.name);
-                                }
-                            }}
-                        >
-                            <Ionicons 
-                                name={tab.icon as any} 
-                                size={22} 
-                                color={activeTab === tab.name ? '#1A237E' : '#888'} 
-                            />
-                            <Text style={[
-                                styles.footerTabText,
-                                activeTab === tab.name && styles.activeFooterTabText
-                            ]}>
-                                {tab.name}
-                            </Text>
-                        </TouchableOpacity>
-                        {index < tabs.length - 1 && <View style={styles.footerSeparator} />}
-                    </React.Fragment>
-                ))}
             </View>
         </SafeAreaView>
     );
 }
 
+// ... Keep your styles as is
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F7F9FC',
-    },
-    content: {
-        padding: 20,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        paddingBottom: 10,
-    },
-    greeting: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    subGreeting: {
-        fontSize: 14,
-        color: '#888',
-    },
-    footer: {
-        flexDirection: 'row',
-        backgroundColor: '#FFF',
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingVertical: 8,
-        paddingHorizontal: 5,
-    },
-    footerTab: {
-        flex: 1,
-        alignItems: 'center',
-        paddingVertical: 5,
-    },
-    footerTabText: {
-        fontSize: 11,
-        color: '#888',
-        marginTop: 4,
-        fontWeight: '500',
-    },
-    activeFooterTabText: {
-        color: '#1A237E',
-        fontWeight: 'bold',
-    },
-    footerSeparator: {
-        width: 1,
-        backgroundColor: '#E0E0E0',
-        marginVertical: 8,
-    },
-    tabContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 50,
-    },
-    paymentsContent: {
-        flex: 1,
-        padding: 20,
-    },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    sheetContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20, maxHeight: '80%' },
-    menuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    menuTitle: { fontSize: 18, fontWeight: '700', flex: 1, textAlign: 'center' },
-    section: { marginBottom: 25 },
-    sectionTitle2: { fontSize: 16, fontWeight: '600', color: '#666', marginBottom: 15 },
-    grid2: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
-    itemContainer: { width: '25%', alignItems: 'center', marginBottom: 20 },
-    iconCircle2: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-    itemLabel: { fontSize: 11, color: '#333', textAlign: 'center' },
-    tabText: {
-        fontSize: 18,
-        color: '#333',
-        fontWeight: '600',
-    },
-    balanceCard: {
-        backgroundColor: '#1A237E',
-        borderRadius: 20,
-        padding: 25,
-        marginBottom: 30,
-        shadowColor: '#1A237E',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    balanceLabel: {
-        color: '#A5B0D6',
-        fontSize: 14,
-        marginBottom: 5,
-    },
-    balanceAmount: {
-        color: '#FFF',
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
-    accountInfo: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    accountNumber: {
-        color: '#A5B0D6',
-        fontSize: 14,
-    },
-    bankName: {
-        color: '#FFD700',
-        fontWeight: 'bold',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 30,
-    },
-    actionButton: {
-        alignItems: 'center',
-        width: '22%',
-    },
-    actionIcon: {
-        width: 60,
-        height: 60,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    actionText: {
-        fontSize: 12,
-        color: '#333',
-        fontWeight: '500',
-    },
-    transactionsSection: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 20,
-    },
-    transactionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    transactionIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: '#F5F5F5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    transactionDetails: {
-        flex: 1,
-    },
-    transactionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    transactionDate: {
-        fontSize: 12,
-        color: '#888',
-    },
-    transactionAmount: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    container: { flex: 1, backgroundColor: '#F7F9FC' },
+    content: { padding: 20 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 10 },
+    greeting: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+    subGreeting: { fontSize: 14, color: '#888' },
+    tabContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+    tabText: { fontSize: 18, color: '#333', fontWeight: '600' },
+    balanceCard: { backgroundColor: '#1A237E', borderRadius: 20, padding: 25, marginBottom: 30, shadowColor: '#1A237E', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+    balanceLabel: { color: '#A5B0D6', fontSize: 14, marginBottom: 5 },
+    balanceAmount: { color: '#FFF', fontSize: 32, fontWeight: 'bold', marginBottom: 20 },
+    accountInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    accountNumber: { color: '#A5B0D6', fontSize: 14 },
+    bankName: { color: '#FFD700', fontWeight: 'bold' },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
+    actionsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+    actionButton: { alignItems: 'center', width: '22%' },
+    actionIcon: { width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    actionText: { fontSize: 12, color: '#333', fontWeight: '500' },
+    transactionsSection: { backgroundColor: '#FFF', borderRadius: 20, padding: 20 },
+    transactionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    transactionIconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    transactionDetails: { flex: 1 },
+    transactionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+    transactionDate: { fontSize: 12, color: '#888' },
+    transactionAmount: { fontSize: 16, fontWeight: 'bold' },
 });
