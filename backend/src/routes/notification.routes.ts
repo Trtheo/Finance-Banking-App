@@ -21,9 +21,10 @@ router.post("/login-otp", async (req, res) => {
 
 //Transaction alert
 router.post("/transaction", async (req, res) => {
-  const { email, name, amount, type } = req.body;
+  const { email, name, amount, type, transactionId, accountNumber, recipient } = req.body;
   try {
-    await sendTransactionEmail(email, name, amount, type);
+    const details = { transactionId, accountNumber, recipient };
+    await sendTransactionEmail(email, name, amount, type, details);
     res.json({ message: "Transaction email sent successfully" });
   } catch (err) {
     res.status(500).json({ message: "Failed to send transaction email" });
