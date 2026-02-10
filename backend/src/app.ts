@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from 'express';
-import { sendLoginOtp,sendTransactionEmail } from './services/notification.service';
+import { sendLoginOtp, sendTransactionEmail } from './services/notification.service';
 import cors from 'cors';
 
 const app: Express = express();
@@ -14,14 +14,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
-    res.send('Nexpay Backend API is Running');
+  res.send('Nexpay Backend API is Running');
 });
 
 import authRoutes from './routes/authRoutes';
+import walletRoutes from './routes/walletRoutes';
+import transactionRoutes from './routes/transactionRoutes';
 
 app.use('/api/auth', authRoutes);
-// app.use('/api/wallet', walletRoutes);
-// app.use('/api/transactions', transactionRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 
 // Login OTP
