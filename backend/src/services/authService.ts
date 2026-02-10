@@ -76,7 +76,18 @@ export const loginUser = async (loginData: any) => {
         $or: [{ email: identifier }, { phoneNumber: identifier }]
     });
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user) {
+        throw new Error('Invalid email or password');
+    }
+
+    // Check if user has a password hash (account might be corrupted)
+    if (!user.passwordHash) {
+        throw new Error('Account is incomplete. Please register again or contact support.');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
         throw new Error('Invalid email or password');
     }
 
