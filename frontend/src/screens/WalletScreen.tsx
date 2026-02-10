@@ -1,10 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function WalletScreen({ navigation }: any) {
+    const handleCardPress = (cardData: any) => {
+        console.log('Card pressed, navigating to CardDetails');
+        console.log('Navigation object:', navigation);
+        if (navigation && navigation.navigate) {
+            navigation.navigate('CardDetails', cardData);
+        } else {
+            Alert.alert('Navigation Error', 'Navigation object is not available');
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -15,7 +25,14 @@ export default function WalletScreen({ navigation }: any) {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                <TouchableOpacity style={styles.cardSection}>
+                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
+                    cardType: 'Platinum Card',
+                    cardNumber: '•••• •••• •••• 3014',
+                    balance: '$317,286.00',
+                    cardholderName: 'Michael John',
+                    expiryDate: '03/29',
+                    colors: ['#2C2C2C', '#1A1A1A']
+                })}>
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Platinum Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
@@ -40,7 +57,14 @@ export default function WalletScreen({ navigation }: any) {
                     </LinearGradient>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.cardSection}>
+                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
+                    cardType: 'Gold Card',
+                    cardNumber: '•••• •••• •••• 8762',
+                    balance: '$72,952.84',
+                    cardholderName: 'Michael John',
+                    expiryDate: '07/28',
+                    colors: ['#D4AF37', '#B8941F', '#8B7355']
+                })}>
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Gold Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
