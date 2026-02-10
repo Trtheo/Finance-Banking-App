@@ -12,12 +12,12 @@ const options = {
                 name: 'Nexpay Team',
             },
         },
-        servers: [
-            {
-                url: 'http://localhost:5000',
-                description: 'Development server',
-            },
-        ],
+servers: [
+    {
+        url: process.env.BASE_URL || 'http://localhost:5000',
+        description: 'API server',
+    },
+],
         components: {
             securitySchemes: {
                 bearerAuth: {
