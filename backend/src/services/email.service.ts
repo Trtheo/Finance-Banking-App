@@ -30,7 +30,7 @@ const transporter: Transporter<SMTPTransport.SentMessageInfo> = nodemailer.creat
 } as SMTPTransport.Options); // Cast object to SMTPTransport.Options
 
 // Verify transporter connection
-transporter.verify((error, success) => {
+transporter.verify((error: Error | null, success: boolean) => {
   if (error) {
     console.error('Email transporter verification failed:', error.message);
   } else {
