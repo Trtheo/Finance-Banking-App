@@ -7,6 +7,8 @@ export interface IUser extends Document {
     passwordHash: string;
     primaryBank: string;
     avatarUrl?: string;
+    loginOtp?: string;
+    loginOtpExpires?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,6 +21,8 @@ const UserSchema: Schema = new Schema(
         passwordHash: { type: String, required: true },
         primaryBank: { type: String, required: true },
         avatarUrl: { type: String },
+        loginOtp: { type: String, default: null },
+        loginOtpExpires: { type: Date, default: null },
     },
     { timestamps: true }
 );
