@@ -12,15 +12,21 @@ console.log('===================================\n');
 // Create transporter with explicit SMTPTransport options
 const transporter: Transporter<SMTPTransport.SentMessageInfo> = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,                    // SMTP host
-  port: Number(process.env.EMAIL_PORT) || 587,     // SMTP port
-  secure: Number(process.env.EMAIL_PORT) === 465,  // true for 465, false for 587
+  port: Number(process.env.EMAIL_PORT) || 465,     // Gmail SSL port (465)
+  secure: true,  // true for SSL (port 465)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false, // Allow self-signed certificates
+    minVersion: 'TLSv1.2', // Use modern TLS
+  },
   family: 4, // force IPv4 (avoids ENETUNREACH on Render)
-  connectionTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 15000,
+  socketTimeout: 15000,
+  debug: true, // Enable debug logs
+  logger: true, // Log SMTP traffic
 } as SMTPTransport.Options); // Cast object to SMTPTransport.Options
 
 // Verify transporter connection
