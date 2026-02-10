@@ -18,8 +18,6 @@ const transactions = [
 ];
 
 export default function DashboardScreen({ navigation }: any) {
-    const [activeTab, setActiveTab] = useState('Home');
-    const [menuVisible, setMenuVisible] = useState(false);
 
     const renderTransaction = ({ item }: { item: any }) => (
         <View style={styles.transactionItem}>
@@ -44,7 +42,7 @@ export default function DashboardScreen({ navigation }: any) {
     );
 
     const renderDashboardContent = () => (
-        <>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.balanceCard}>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
                 <Text style={styles.balanceAmount}>RWF 2,450,000</Text>
@@ -85,37 +83,8 @@ export default function DashboardScreen({ navigation }: any) {
                     scrollEnabled={false}
                 />
             </View>
-        </>
+        </ScrollView>
     );
-
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'Home':
-                return renderDashboardContent();
-            case 'Payments':
-                setMenuVisible(true);
-                setActiveTab('Home');
-                return renderDashboardContent();
-            case 'Transactions':
-                navigation.navigate('Transactions');
-                setActiveTab('Home');
-                return renderDashboardContent();
-            case 'Wallet':
-                return <View style={styles.tabContent}><Text style={styles.tabText}>Wallet Screen</Text></View>;
-            case 'Profile':
-                return <View style={styles.tabContent}><Text style={styles.tabText}>Profile Screen</Text></View>;
-            default:
-                return renderDashboardContent();
-        }
-    };
-
-    const tabs = [
-        { name: 'Home', icon: 'home' },
-        { name: 'Payments', icon: 'card' },
-        { name: 'Transactions', icon: 'list' },
-        { name: 'Wallet', icon: 'wallet' },
-        { name: 'Profile', icon: 'person' },
-    ];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -124,97 +93,13 @@ export default function DashboardScreen({ navigation }: any) {
                     <Text style={styles.greeting}>Hello, Michael</Text>
                     <Text style={styles.subGreeting}>Welcome back</Text>
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                     <Ionicons name="person-circle-outline" size={40} color="#333" />
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
-                {renderContent()}
-            </ScrollView>
-
-            <Modal visible={menuVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.sheetContainer}>
-                        <View style={styles.menuHeader}>
-                            <Text style={styles.menuTitle}>Menu</Text>
-                            <TouchableOpacity onPress={() => setMenuVisible(false)}>
-                                <Ionicons name="close" size={24} color="#000" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {[
-                                { title: 'Payments', data: [
-                                    { id: '1', label: 'Internet', icon: 'wifi' },
-                                    { id: '2', label: 'Electricity', icon: 'flash' },
-                                    { id: '3', label: 'Water', icon: 'water' },
-                                    { id: '4', label: 'Television', icon: 'tv' },
-                                    { id: '5', label: 'Games', icon: 'game-controller' },
-                                    { id: '6', label: 'Tax', icon: 'receipt' },
-                                    { id: '7', label: 'Lifestyle', icon: 'bag' },
-                                    { id: '8', label: 'VA Number', icon: 'phone-portrait' },
-                                ]},
-                                { title: 'Insurance', data: [
-                                    { id: '9', label: 'Health', icon: 'heart' },
-                                    { id: '10', label: 'Car', icon: 'car' },
-                                    { id: '11', label: 'Motorcycle', icon: 'bicycle' },
-                                    { id: '12', label: 'Property', icon: 'business' },
-                                ]},
-                                { title: 'Others', data: [
-                                    { id: '13', label: 'Top Up', icon: 'wallet' },
-                                    { id: '14', label: 'Investment', icon: 'trending-up' },
-                                    { id: '15', label: 'Credit', icon: 'card' },
-                                    { id: '16', label: 'Donate', icon: 'gift' },
-                                ]},
-                            ].map((section) => (
-                                <View key={section.title} style={styles.section}>
-                                    <Text style={styles.sectionTitle2}>{section.title}</Text>
-                                    <View style={styles.grid2}>
-                                        {section.data.map((item) => (
-                                            <TouchableOpacity key={item.id} style={styles.itemContainer}>
-                                                <View style={styles.iconCircle2}>
-                                                    <Ionicons name={item.icon as any} size={24} color="#FFD700" />
-                                                </View>
-                                                <Text style={styles.itemLabel}>{item.label}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-
-            <View style={styles.footer}>
-                {tabs.map((tab, index) => (
-                    <React.Fragment key={tab.name}>
-                        <TouchableOpacity 
-                            style={styles.footerTab}
-                            onPress={() => {
-                                if (tab.name === 'Transactions') {
-                                    navigation.navigate('Transactions');
-                                } else {
-                                    setActiveTab(tab.name);
-                                }
-                            }}
-                        >
-                            <Ionicons 
-                                name={tab.icon as any} 
-                                size={22} 
-                                color={activeTab === tab.name ? '#1A237E' : '#888'} 
-                            />
-                            <Text style={[
-                                styles.footerTabText,
-                                activeTab === tab.name && styles.activeFooterTabText
-                            ]}>
-                                {tab.name}
-                            </Text>
-                        </TouchableOpacity>
-                        {index < tabs.length - 1 && <View style={styles.footerSeparator} />}
-                    </React.Fragment>
-                ))}
+            <View style={{ flex: 1 }}>
+                {renderDashboardContent()}
             </View>
         </SafeAreaView>
     );
