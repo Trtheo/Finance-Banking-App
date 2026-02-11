@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import Transaction, { TransactionType, TransactionStatus } from '../models/Transaction';
 import Wallet from '../models/Wallet';
+import User from '../models/User';
 import { v4 as uuidv4 } from 'uuid';
+import { sendTransactionEmail } from './notification.service';
 
 /**
  * Create a deposit transaction
@@ -32,6 +34,15 @@ export const createDeposit = async (userId: string, amount: number, description?
         }], { session });
 
         await session.commitTransaction();
+
+        // 4. Send notification (non-blocking)
+        const user = await User.findById(userId);
+        if (user && transaction[0]) {
+            sendTransactionEmail(user.email, user.fullName, amount, TransactionType.DEPOSIT, {
+                transactionId: transaction[0].reference
+            }).catch(err => console.error('Deposit notification failed:', err.message));
+        }
+
         return transaction[0];
     } catch (error) {
         await session.abortTransaction();
@@ -75,6 +86,15 @@ export const createWithdrawal = async (userId: string, amount: number, descripti
         }], { session });
 
         await session.commitTransaction();
+
+        // 5. Send notification (non-blocking)
+        const user = await User.findById(userId);
+        if (user && transaction[0]) {
+            sendTransactionEmail(user.email, user.fullName, amount, TransactionType.WITHDRAW, {
+                transactionId: transaction[0].reference
+            }).catch(err => console.error('Withdrawal notification failed:', err.message));
+        }
+
         return transaction[0];
     } catch (error) {
         await session.abortTransaction();
@@ -132,6 +152,29 @@ export const createTransfer = async (senderId: string, receiverAccountNumber: st
         }], { session });
 
         await session.commitTransaction();
+
+        // 6. Send notifications (non-blocking)
+        const [sender, receiver] = await Promise.all([
+            User.findById(senderId),
+            User.findById(receiverWallet.userId)
+        ]);
+
+        if (sender && transaction[0]) {
+            sendTransactionEmail(sender.email, sender.fullName, amount, TransactionType.TRANSFER, {
+                transactionId: transaction[0].reference,
+                accountNumber: receiverAccountNumber,
+                recipient: receiver?.fullName || 'Recipient'
+            }).catch(err => console.error('Transfer sender notification failed:', err.message));
+        }
+
+        if (receiver && transaction[0]) {
+            sendTransactionEmail(receiver.email, receiver.fullName, amount, TransactionType.DEPOSIT, {
+                transactionId: transaction[0].reference,
+                accountNumber: senderWallet.accountNumber,
+                recipient: sender?.fullName || 'Sender'
+            }).catch(err => console.error('Transfer receiver notification failed:', err.message));
+        }
+
         return transaction[0];
     } catch (error) {
         await session.abortTransaction();
