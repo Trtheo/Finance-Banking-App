@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as authService from '../services/authService';
+import * as transactionService from '../services/transactionService';
 
 // @ts-ignore
 export default function OTPVerificationScreen({ navigation, route }) {
@@ -29,13 +30,13 @@ export default function OTPVerificationScreen({ navigation, route }) {
             setIsLoading(true);
             
             if (type === 'withdraw') {
-                // TODO: Call withdraw API with amount and description
-                Alert.alert('Success', `Withdrawal of $${amount} completed successfully!`, [
+                await transactionService.withdraw(amount, description);
+                Alert.alert('Success', `Withdrawal of RWF ${Number(amount).toLocaleString()} completed successfully!`, [
                     { text: 'OK', onPress: () => navigation.navigate('Main') }
                 ]);
             } else if (type === 'deposit') {
-                // TODO: Call deposit API with amount and description
-                Alert.alert('Success', `Deposit of $${amount} completed successfully!`, [
+                await transactionService.deposit(amount, description);
+                Alert.alert('Success', `Deposit of RWF ${Number(amount).toLocaleString()} completed successfully!`, [
                     { text: 'OK', onPress: () => navigation.navigate('Main') }
                 ]);
             } else {
