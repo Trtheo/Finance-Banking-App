@@ -181,7 +181,7 @@ export default function CardManagementScreen({ navigation }: any) {
                             </TouchableOpacity>
                         </View>
                     ))
-                )}}
+                )}
 
                 <TouchableOpacity style={styles.addButton} onPress={handleAddCard}>
                     <Ionicons name="add" size={20} color="#000" />
