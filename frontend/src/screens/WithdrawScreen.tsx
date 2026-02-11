@@ -16,16 +16,12 @@ export default function WithdrawScreen({ navigation }: any) {
             return;
         }
 
-        setIsLoading(true);
-        try {
-            // TODO: Implement withdraw API call
-            Alert.alert('Success', 'Withdrawal request submitted successfully!');
-            navigation.goBack();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to process withdrawal');
-        } finally {
-            setIsLoading(false);
-        }
+        // Navigate to OTP verification with withdraw data
+        navigation.navigate('OTPVerification', {
+            type: 'withdraw',
+            amount: parseFloat(amount),
+            description: description || 'Withdrawal'
+        });
     };
 
     return (
@@ -64,15 +60,10 @@ export default function WithdrawScreen({ navigation }: any) {
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.withdrawButton, isLoading && styles.disabledButton]}
+                        style={styles.withdrawButton}
                         onPress={handleWithdraw}
-                        disabled={isLoading}
                     >
-                        {isLoading ? (
-                            <ActivityIndicator color="white" />
-                        ) : (
-                            <Text style={styles.buttonText}>Withdraw</Text>
-                        )}
+                        <Text style={styles.buttonText}>Continue</Text>
                     </TouchableOpacity>
                 </View>
             </View>

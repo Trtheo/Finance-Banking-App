@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect } from '../middlewares/authMiddleware';
-import Wallet from '../models/Wallet';
+import { deposit, withdraw, getWallet } from '../controllers/walletController';
 
 const router = express.Router();
 
@@ -18,16 +18,58 @@ const router = express.Router();
  *       404:
  *         description: Wallet not found
  */
-router.get('/me', protect, async (req: any, res) => {
-    try {
-        const wallet = await Wallet.findOne({ userId: req.user.id });
-        if (!wallet) {
-            return res.status(404).json({ message: 'Wallet not found' });
-        }
-        res.json(wallet);
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
-});
+router.get('/me', protect, getWallet);
+
+/**
+ * @swagger
+ * /api/wallet/deposit:
+ *   post:
+ *     summary: Deposit money to wallet
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amount:
+ *                 type: number
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Deposit successful
+ *       400:
+ *         description: Invalid amount
+ */
+/**
+ * @swagger
+ * /api/wallet/withdraw:
+ *   post:
+ *     summary: Withdraw money from wallet
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amount:
+ *                 type: number
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Withdrawal successful
+ *       400:
+ *         description: Invalid amount or insufficient balance
+ */
+router.post('/withdraw', protect, withdraw);
 
 export default router;
