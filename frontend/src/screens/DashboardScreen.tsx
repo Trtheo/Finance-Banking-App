@@ -111,7 +111,7 @@ export default function DashboardScreen({ navigation }: any) {
 
                 <View style={styles.actionsGrid}>
                     <ActionButton icon="send-outline" label="Transfer" color="#FFDE31" onPress={() => navigation.navigate('FundTransfer')} />
-                    <ActionButton icon="download-outline" label="Deposit" color="#FFF9DB" onPress={() => Alert.alert('Deposit', 'Coming soon!')} />
+                    <ActionButton icon="download-outline" label="Deposit" color="#FFF9DB" onPress={() => navigation.navigate('Deposit')} />
                     <ActionButton icon="grid-outline" label="Withdraw" color="#FFF9DB" onPress={() => Alert.alert('Withdraw', 'Coming soon!')} />
                     <ActionButton icon="ellipsis-horizontal" label="More" color="#FFF9DB" onPress={() => navigation.navigate('Transactions')} />
                 </View>
