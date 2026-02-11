@@ -1,79 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    SafeAreaView, ActivityIndicator, Image
+    SafeAreaView, ActivityIndicator, RefreshControl, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as notificationService from '../services/notificationService';
 
-interface Notification {
-    id: string;
-    type: 'payment_request' | 'payment_success' | 'cashback' | 'transfer_success' | 'security';
+type NotificationType = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER_SENT' | 'TRANSFER_RECEIVED';
+
+interface ApiNotification {
+    _id: string;
+    type: NotificationType;
     title: string;
     message: string;
     amount?: number;
-    time: string;
-    date: string;
-    isToday: boolean;
-    avatar?: string;
-    status?: 'pending' | 'completed';
+    reference?: string;
+    isRead: boolean;
+    createdAt: string;
 }
 
-const NotificationItem = ({ notification, onAccept, onDecline }: {
-    notification: Notification;
-    onAccept?: () => void;
-    onDecline?: () => void;
-}) => {
-    const getIcon = () => {
-        switch (notification.type) {
-            case 'payment_request':
-                return { name: 'person-circle', color: '#FF9800', bg: '#FFF3E0' };
-            case 'payment_success':
-                return { name: 'checkmark-circle', color: '#4CAF50', bg: '#E8F5E9' };
-            case 'cashback':
-                return { name: 'gift', color: '#2196F3', bg: '#E3F2FD' };
-            case 'transfer_success':
-                return { name: 'arrow-up-circle', color: '#FFD700', bg: '#FFFDE7' };
-            case 'security':
-                return { name: 'shield-checkmark', color: '#F44336', bg: '#FFEBEE' };
-            default:
-                return { name: 'notifications', color: '#9E9E9E', bg: '#F5F5F5' };
-        }
-    };
+const getIcon = (type: NotificationType) => {
+    switch (type) {
+        case 'DEPOSIT':
+            return { name: 'arrow-down-circle', color: '#2E7D32', bg: '#E8F5E9' };
+        case 'WITHDRAW':
+            return { name: 'arrow-up-circle', color: '#C62828', bg: '#FFEBEE' };
+        case 'TRANSFER_SENT':
+            return { name: 'send', color: '#EF6C00', bg: '#FFF3E0' };
+        case 'TRANSFER_RECEIVED':
+            return { name: 'download', color: '#1565C0', bg: '#E3F2FD' };
+        default:
+            return { name: 'notifications', color: '#9E9E9E', bg: '#F5F5F5' };
+    }
+};
 
-    const icon = getIcon();
+const isSameDay = (left: Date, right: Date) => (
+    left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate()
+);
+
+const isToday = (dateString: string) => {
+    const created = new Date(dateString);
+    return isSameDay(created, new Date());
+};
+
+const formatTime = (dateString: string) => (
+    new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+);
+
+const NotificationItem = ({ item, onPress }: { item: ApiNotification; onPress: () => void }) => {
+    const icon = getIcon(item.type);
 
     return (
-        <View style={styles.notificationItem}>
+        <TouchableOpacity
+            style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
+            onPress={onPress}
+            activeOpacity={0.9}
+        >
             <View style={[styles.iconContainer, { backgroundColor: icon.bg }]}>
-                <Ionicons name={icon.name as any} size={24} color={icon.color} />
+                <Ionicons name={icon.name as any} size={22} color={icon.color} />
             </View>
-            
+
             <View style={styles.contentContainer}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.timeText}>{notification.time}</Text>
+                    <Text style={styles.notificationTitle}>{item.title}</Text>
+                    <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
                 </View>
-                
-                <Text style={styles.notificationMessage}>{notification.message}</Text>
-                
-                {notification.amount && (
-                    <Text style={styles.amountText}>
-                        ${notification.amount.toLocaleString()}
-                    </Text>
+
+                <Text style={styles.notificationMessage}>{item.message}</Text>
+
+                {typeof item.amount === 'number' && (
+                    <Text style={styles.amountText}>RWF {item.amount.toLocaleString()}</Text>
                 )}
-                
-                {notification.type === 'payment_request' && (
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.declineBtn} onPress={onDecline}>
-                            <Text style={styles.declineBtnText}>Decline</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.acceptBtn} onPress={onAccept}>
-                            <Text style={styles.acceptBtnText}>Accept</Text>
-                        </TouchableOpacity>
-                    </View>
+
+                {item.reference && (
+                    <Text style={styles.referenceText}>Ref: {item.reference}</Text>
                 )}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 
@@ -82,40 +87,84 @@ const EmptyNotifications = () => (
         <View style={styles.emptyIconContainer}>
             <Ionicons name="notifications-off-outline" size={64} color="#BDBDBD" />
         </View>
-        <Text style={styles.emptyTitle}>No Notification yet</Text>
-        <Text style={styles.emptyMessage}>
-            You will receive a notification if there{"\n"}is something on your account
-        </Text>
+        <Text style={styles.emptyTitle}>No Notifications Yet</Text>
+        <Text style={styles.emptyMessage}>New transaction alerts will appear here.</Text>
     </View>
 );
 
 export default function NotificationScreen({ navigation }: any) {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<ApiNotification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const fetchNotifications = async (showLoader = false) => {
+        if (showLoader) {
+            setIsLoading(true);
+        }
+
+        try {
+            const data = await notificationService.getMyNotifications();
+            setNotifications(data);
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to load notifications');
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
+        }
+    };
 
     useEffect(() => {
-        // Simulate loading notifications
-        setTimeout(() => {
-            // Empty notifications array to show empty state
-            const mockNotifications: Notification[] = [];
-            
-            setNotifications(mockNotifications);
-            setIsLoading(false);
-        }, 1000);
+        fetchNotifications(true);
     }, []);
 
-    const handleAccept = (notificationId: string) => {
-        // Handle accept payment request
-        console.log('Accept payment request:', notificationId);
+    const onRefresh = () => {
+        setIsRefreshing(true);
+        fetchNotifications(false);
     };
 
-    const handleDecline = (notificationId: string) => {
-        // Handle decline payment request
-        console.log('Decline payment request:', notificationId);
+    const markAsRead = async (notificationId: string) => {
+        const target = notifications.find(item => item._id === notificationId);
+        if (!target || target.isRead) {
+            return;
+        }
+
+        setNotifications(prev =>
+            prev.map(item =>
+                item._id === notificationId ? { ...item, isRead: true } : item
+            )
+        );
+
+        try {
+            await notificationService.markNotificationAsRead(notificationId);
+        } catch {
+            // Keep optimistic UI behavior even if the backend call fails.
+        }
     };
 
-    const todayNotifications = notifications.filter(n => n.isToday);
-    const yesterdayNotifications = notifications.filter(n => !n.isToday);
+    const markAllAsRead = async () => {
+        const hasUnread = notifications.some(item => !item.isRead);
+        if (!hasUnread) {
+            return;
+        }
+
+        setNotifications(prev => prev.map(item => ({ ...item, isRead: true })));
+
+        try {
+            await notificationService.markAllNotificationsAsRead();
+        } catch {
+            // Keep optimistic UI behavior even if the backend call fails.
+        }
+    };
+
+    const todayNotifications = useMemo(
+        () => notifications.filter(item => isToday(item.createdAt)),
+        [notifications]
+    );
+
+    const earlierNotifications = useMemo(
+        () => notifications.filter(item => !isToday(item.createdAt)),
+        [notifications]
+    );
 
     if (isLoading) {
         return (
@@ -128,45 +177,55 @@ export default function NotificationScreen({ navigation }: any) {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
                 >
                     <Ionicons name="chevron-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notification</Text>
-                <TouchableOpacity style={styles.moreButton}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
+
+                <Text style={styles.headerTitle}>Notifications</Text>
+
+                <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
+                    <Text style={styles.markAllText}>Mark all</Text>
                 </TouchableOpacity>
             </View>
 
             {notifications.length === 0 ? (
                 <EmptyNotifications />
             ) : (
-                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={(
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={onRefresh}
+                            colors={['#FFD700']}
+                        />
+                    )}
+                >
                     {todayNotifications.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Today</Text>
-                            {todayNotifications.map((notification) => (
+                            {todayNotifications.map((item) => (
                                 <NotificationItem
-                                    key={notification.id}
-                                    notification={notification}
-                                    onAccept={() => handleAccept(notification.id)}
-                                    onDecline={() => handleDecline(notification.id)}
+                                    key={item._id}
+                                    item={item}
+                                    onPress={() => markAsRead(item._id)}
                                 />
                             ))}
                         </View>
                     )}
 
-                    {yesterdayNotifications.length > 0 && (
+                    {earlierNotifications.length > 0 && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Yesterday</Text>
-                            {yesterdayNotifications.map((notification) => (
+                            <Text style={styles.sectionTitle}>Earlier</Text>
+                            {earlierNotifications.map((item) => (
                                 <NotificationItem
-                                    key={notification.id}
-                                    notification={notification}
-                                    onAccept={() => handleAccept(notification.id)}
-                                    onDecline={() => handleDecline(notification.id)}
+                                    key={item._id}
+                                    item={item}
+                                    onPress={() => markAsRead(item._id)}
                                 />
                             ))}
                         </View>
@@ -214,11 +273,16 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#000',
     },
-    moreButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
+    markAllButton: {
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: '#FFF',
+    },
+    markAllText: {
+        fontSize: 12,
+        color: '#444',
+        fontWeight: '600',
     },
     scrollView: {
         flex: 1,
@@ -240,11 +304,15 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 16,
         marginBottom: 12,
-        elevation: 2,
+        elevation: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.07,
+        shadowRadius: 3,
+    },
+    unreadItem: {
+        borderWidth: 1,
+        borderColor: '#FFE082',
     },
     iconContainer: {
         width: 48,
@@ -281,38 +349,14 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     amountText: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
         color: '#000',
-        marginBottom: 12,
+        marginBottom: 6,
     },
-    actionButtons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    declineBtn: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 25,
-        backgroundColor: '#F5F5F5',
-        alignItems: 'center',
-    },
-    declineBtnText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
-    },
-    acceptBtn: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 25,
-        backgroundColor: '#FFD700',
-        alignItems: 'center',
-    },
-    acceptBtnText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#000',
+    referenceText: {
+        fontSize: 12,
+        color: '#888',
     },
     emptyContainer: {
         flex: 1,
@@ -334,7 +378,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '600',
         color: '#000',
-        marginBottom: 16,
+        marginBottom: 10,
     },
     emptyMessage: {
         fontSize: 14,

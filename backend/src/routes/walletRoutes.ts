@@ -45,6 +45,8 @@ router.get('/me', protect, getWallet);
  *       400:
  *         description: Invalid amount
  */
+router.post('/deposit', protect, deposit);
+
 /**
  * @swagger
  * /api/wallet/withdraw:
