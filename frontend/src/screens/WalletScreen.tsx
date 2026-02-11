@@ -1,19 +1,44 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as walletService from '../services/walletService';
 
 export default function WalletScreen({ navigation }: any) {
+    const [wallet, setWallet] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchWallet = async () => {
+            try {
+                const data = await walletService.getWalletMe();
+                setWallet(data);
+            } catch (error: any) {
+                console.error('Error fetching wallet:', error.message);
+                Alert.alert('Error', 'Failed to fetch wallet data');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchWallet();
+    }, []);
+
     const handleCardPress = (cardData: any) => {
-        console.log('Card pressed, navigating to CardDetails');
-        console.log('Navigation object:', navigation);
         if (navigation && navigation.navigate) {
             navigation.navigate('CardDetails', cardData);
         } else {
             Alert.alert('Navigation Error', 'Navigation object is not available');
         }
     };
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
+                <ActivityIndicator size="large" color="#FFD700" />
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -27,8 +52,8 @@ export default function WalletScreen({ navigation }: any) {
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
                     cardType: 'Platinum Card',
-                    cardNumber: '•••• •••• •••• 3014',
-                    balance: '$317,286.00',
+                    cardNumber: wallet?.accountNumber || '•••• •••• •••• 3014',
+                    balance: `${wallet?.currency || 'RWF'} ${wallet?.balance?.toLocaleString() || '0'}`,
                     cardholderName: 'Michael John',
                     expiryDate: '03/29',
                     colors: ['#2C2C2C', '#1A1A1A']
@@ -42,8 +67,10 @@ export default function WalletScreen({ navigation }: any) {
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <View style={styles.chipIcon} />
                         </View>
-                        <Text style={styles.cardNumber}>•••• •••• •••• 3014</Text>
-                        <Text style={styles.cardBalance}>$317,286.00</Text>
+                        <Text style={styles.cardNumber}>{wallet?.accountNumber || '•••• •••• •••• 3014'}</Text>
+                        <Text style={styles.cardBalance}>
+                            {wallet?.currency || 'RWF'} {wallet?.balance?.toLocaleString() || '0'}
+                        </Text>
                         <View style={styles.cardBottom}>
                             <View>
                                 <Text style={styles.cardLabel2}>Card holder name</Text>

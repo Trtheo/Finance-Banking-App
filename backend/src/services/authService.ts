@@ -49,19 +49,19 @@ export const registerUser = async (userData: any) => {
             currency: 'RWF',
         });
 
-        // Send welcome email
-        try {
-            await sendWelcomeEmail(user.email, user.fullName, accountNumber);
-        } catch (error) {
-            console.error('Failed to send welcome email:', error);
-            // Don't throw error, just log it - we don't want to block registration
-        }
+        // Send welcome email in the background (non-blocking)
+        sendWelcomeEmail(user.email, user.fullName, accountNumber)
+            .catch((error) => {
+                console.error('⚠️  Welcome email failed (non-critical):', error.message);
+                // Don't propagate error - email is not critical for registration
+            });
 
         return {
             _id: user._id.toString(),
             fullName: user.fullName,
             email: user.email,
             token: generateToken(user._id.toString()),
+            message: 'Registration successful! Welcome email may take a moment to arrive.',
         };
     } else {
         throw new Error('Invalid user data');
@@ -76,7 +76,18 @@ export const loginUser = async (loginData: any) => {
         $or: [{ email: identifier }, { phoneNumber: identifier }]
     });
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user) {
+        throw new Error('Invalid email or password');
+    }
+
+    // Check if user has a password hash (account might be corrupted)
+    if (!user.passwordHash) {
+        throw new Error('Account is incomplete. Please register again or contact support.');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
         throw new Error('Invalid email or password');
     }
 
@@ -90,19 +101,33 @@ export const loginUser = async (loginData: any) => {
         loginOtpExpires: otpExpires,
     });
 
-    // Send OTP email
-    try {
-        await sendLoginOtp(user.email, user.fullName, otp);
-    } catch (error) {
-        console.error('Failed to send OTP email:', error);
-        throw new Error('Failed to send OTP email');
-    }
+    // Send OTP email in the background (non-blocking)
+    // Don't await or throw - we want login to succeed even if email fails
+    console.log('\n' + '='.repeat(50));
+    console.log(`🔥 [DEV] YOUR OTP IS: ${otp} 🔥`);
+    console.log(`For user: ${user.email}`);
+    console.log('='.repeat(50) + '\n');
 
-    return {
+    sendLoginOtp(user.email, user.fullName, otp)
+        .catch((error) => {
+            console.error('⚠️  OTP email failed (still saved in DB):', error.message);
+            // Email failed but OTP is saved in database for verification
+        });
+
+    // Return immediately with OTP info
+    const response: any = {
         _id: user._id.toString(),
         email: user.email,
-        message: 'OTP has been sent to your email',
+        message: 'OTP sent to your email. Please check spam folder if not received.',
+        success: true,
     };
+
+    // Add test OTP in development mode only
+    if (process.env.NODE_ENV !== 'production') {
+        response.testOtp = otp; // For local testing only
+    }
+
+    return response;
 };
 
 // Verify Login OTP and get token
@@ -146,4 +171,23 @@ export const getUserProfile = async (userId: string) => {
     } else {
         throw new Error('User not found');
     }
+};
+
+// Update User Profile
+export const updateUserProfile = async (userId: string, updateData: any) => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    // Update fields if provided
+    if (updateData.fullName) user.fullName = updateData.fullName;
+    if (updateData.email) user.email = updateData.email;
+    if (updateData.phone) user.phoneNumber = updateData.phone;
+    if (updateData.dateOfBirth) user.dateOfBirth = updateData.dateOfBirth;
+    if (updateData.city) user.city = updateData.city;
+    if (updateData.language) user.language = updateData.language;
+
+    const updatedUser = await user.save();
+    return updatedUser;
 };

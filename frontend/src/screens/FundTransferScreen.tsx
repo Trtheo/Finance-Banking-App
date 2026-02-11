@@ -1,93 +1,112 @@
-import React from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TextInput, 
-  Image, TouchableOpacity, Dimensions 
+import React, { useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TextInput,
+  TouchableOpacity, Dimensions, Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import * as transactionService from '../services/transactionService';
 
 const { width } = Dimensions.get('window');
 
-const TransferMethod = ({ icon, title, color, iconColor }: any) => (
-  <TouchableOpacity style={styles.methodCard}>
-    <View style={[styles.methodIcon, { backgroundColor: color }]}>
-      <MaterialCommunityIcons name={icon} size={24} color={iconColor} />
-    </View>
-    <Text style={styles.methodText}>{title}</Text>
-    <Ionicons name="chevron-forward" size={20} color="#E0E0E0" />
-  </TouchableOpacity>
-);
-
-const AvatarItem = ({ name, img }: any) => (
-  <View style={styles.avatarContainer}>
-    <Image source={{ uri: img }} style={styles.avatarImg} />
-    <Text style={styles.avatarName}>{name}</Text>
-  </View>
-);
-
-const FavoriteRow = ({ name, sub, img }: any) => (
-  <View style={styles.favRow}>
-    <Image source={{ uri: img }} style={styles.favImg} />
-    <View style={{ flex: 1, marginLeft: 15 }}>
-      <Text style={styles.favName}>{name}</Text>
-      <Text style={styles.favSub}>{sub}</Text>
-    </View>
-    <MaterialCommunityIcons name="star" size={22} color="#FFDE31" />
-  </View>
-);
-
 export default function FundTransferScreen({ navigation }: any) {
+  const [recipientAccount, setRecipientAccount] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleTransfer = async () => {
+    if (!recipientAccount || !amount) {
+      Alert.alert('Error', 'Please enter recipient account and amount');
+      return;
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await transactionService.transfer(recipientAccount, numAmount, description);
+
+      Alert.alert('Success', `Successfully transferred RWF ${numAmount.toLocaleString()} to ${recipientAccount}`, [
+        { text: 'OK', onPress: () => navigation.navigate('Main') }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Transfer Failed', error.response?.data?.message || error.message || 'An error occurred during transfer');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transfer</Text>
+        <Text style={styles.headerTitle}>Send Money</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        <View style={styles.actionContainer}>
-          <TransferMethod 
-            icon="wallet-outline" 
-            title="Nexpay Account" 
-            color="#FFDE31" 
-            iconColor="#000" 
-          />
-          <TransferMethod 
-            icon="bank-outline" 
-            title="Bank Account" 
-            color="#FFF9DB" 
-            iconColor="#FFDE31" 
-          />
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Recipient Account Number</Text>
+          <View style={styles.inputContainer}>
+            <Ionicons name="person-outline" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 1234567890"
+              value={recipientAccount}
+              onChangeText={setRecipientAccount}
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <Text style={styles.label}>Amount (RWF)</Text>
+          <View style={styles.inputContainer}>
+            <Ionicons name="cash-outline" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <Text style={styles.label}>Description (Optional)</Text>
+          <View style={[styles.inputContainer, { height: 100, alignItems: 'flex-start' }]}>
+            <Ionicons name="chatbubble-outline" size={20} color="#666" style={[styles.icon, { marginTop: 12 }]} />
+            <TextInput
+              style={[styles.input, { height: '100%', textAlignVertical: 'top' }]}
+              placeholder="What is this for?"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.transferButton, isLoading && { opacity: 0.7 }]}
+            onPress={handleTransfer}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.transferButtonText}>Confirm Transfer</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.whitePanel}>
-          <Text style={styles.sectionTitle}>Latest Transfers</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.avatarList}>
-            <AvatarItem name="Steven" img="https://i.pravatar.cc/150?u=1" />
-            <AvatarItem name="Hana" img="https://i.pravatar.cc/150?u=2" />
-            <AvatarItem name="Tom" img="https://i.pravatar.cc/150?u=3" />
-            <AvatarItem name="Lisa" img="https://i.pravatar.cc/150?u=4" />
-            <AvatarItem name="Bruno" img="https://i.pravatar.cc/150?u=5" />
-          </ScrollView>
-
-          <View style={styles.favHeader}>
-            <Text style={styles.sectionTitle}>Favorite Lists</Text>
-            <TouchableOpacity><Text style={styles.viewAllText}>View all</Text></TouchableOpacity>
-          </View>
-
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#BDBDBD" />
-            <TextInput placeholder="Search" style={styles.searchInput} placeholderTextColor="#BDBDBD" />
-          </View>
-
-          <FavoriteRow name="Ethan Reynolds" sub="Nexpay • 0743523736" img="https://i.pravatar.cc/150?u=8" />
-          <FavoriteRow name="Sophia Bennett" sub="Bank BRI • 108934623804" img="https://i.pravatar.cc/150?u=9" />
-          
-          <View style={{ height: 100 }} />
+        <View style={styles.infoSection}>
+          <Ionicons name="information-circle-outline" size={20} color="#888" />
+          <Text style={styles.infoText}>
+            Transfers between Nexpay accounts are instant and free. Please verify the recipient's account number before confirming.
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -96,37 +115,56 @@ export default function FundTransferScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9F9F9' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, height: 60 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 15, height: 60
+  },
   backBtn: { width: 40 },
   headerTitle: { fontSize: 18, fontWeight: '700' },
-  scrollContent: { paddingTop: 10 },
-  actionContainer: { paddingHorizontal: 20, marginBottom: 25 },
-  methodCard: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', 
-    padding: 15, borderRadius: 20, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 
+  scrollContent: { padding: 20 },
+  formContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 25,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3
   },
-  methodIcon: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  methodText: { flex: 1, marginLeft: 15, fontSize: 16, fontWeight: '600' },
-  whitePanel: { 
-    backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40, 
-    padding: 25, flex: 1, minHeight: 600 
+  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 15 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F8F8',
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    height: 55,
+    borderWidth: 1,
+    borderColor: '#F0F0F0'
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15 },
-  avatarList: { marginBottom: 25 },
-  avatarContainer: { alignItems: 'center', marginRight: 20 },
-  avatarImg: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#EEE' },
-  avatarName: { marginTop: 8, fontSize: 13, color: '#4F4F4F' },
-  favHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  viewAllText: { color: '#BDBDBD', fontSize: 14 },
-  searchContainer: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F8F8', 
-    borderRadius: 25, paddingHorizontal: 15, height: 50, marginVertical: 15,
-    borderWidth: 1, borderColor: '#F0F0F0'
+  input: { flex: 1, marginLeft: 10, fontSize: 16, color: '#000' },
+  icon: { marginRight: 5 },
+  transferButton: {
+    backgroundColor: '#FFDE31',
+    borderRadius: 15,
+    height: 55,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
+    elevation: 2
   },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 16 },
-  favRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  favImg: { width: 50, height: 50, borderRadius: 25 },
-  favName: { fontSize: 16, fontWeight: '600' },
-  favSub: { fontSize: 12, color: '#BDBDBD', marginTop: 2 },
+  transferButtonText: { fontSize: 16, fontWeight: '700', color: '#000' },
+  infoSection: {
+    flexDirection: 'row',
+    marginTop: 25,
+    paddingHorizontal: 10,
+    alignItems: 'flex-start'
+  },
+  infoText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 13,
+    color: '#888',
+    lineHeight: 18
+  }
 });

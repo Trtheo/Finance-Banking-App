@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Modal, Switch, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Modal, Switch, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import * as userService from '../services/userService';
 
 const { width } = Dimensions.get('window');
 
@@ -15,18 +16,44 @@ export default function ProfileScreen() {
     const [showExitModal, setShowExitModal] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [loginFingerprint, setLoginFingerprint] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [profileData, setProfileData] = useState({
-        name: 'Michael John',
-        email: 'michaeljohn@gmail.com',
-        phoneNumber: '234 567 89',
-        dateOfBirth: '16 September 2002',
-        city: 'New York',
+        name: '',
+        email: '',
+        phoneNumber: '',
+        dateOfBirth: '',
+        city: '',
         language: 'English (US)',
         profileImage: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
     });
 
     const [tempData, setTempData] = useState({ ...profileData });
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const data = await userService.getUserMe();
+                const formattedData = {
+                    name: data.fullName || data.name || '',
+                    email: data.email || '',
+                    phoneNumber: data.phone || data.phoneNumber || '',
+                    dateOfBirth: data.dateOfBirth || 'Not set',
+                    city: data.city || 'Not set',
+                    language: data.language || 'English (US)',
+                    profileImage: data.profileImage || profileData.profileImage
+                };
+                setProfileData(formattedData);
+                setTempData(formattedData);
+            } catch (error: any) {
+                console.error('Error fetching profile:', error.message);
+                // Don't alert here as it might be an auth issue handled elsewhere
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const languages = [
         { name: 'Chinese', flag: '🇨🇳' },
@@ -43,9 +70,24 @@ export default function ProfileScreen() {
         { name: 'Rwanda', flag: '🇷🇼' },
     ];
 
-    const handleSave = () => {
-        setProfileData({ ...tempData });
-        setShowSuccessModal(true);
+    const handleSave = async () => {
+        try {
+            setIsLoading(true);
+            await userService.updateProfile({
+                fullName: tempData.name,
+                email: tempData.email,
+                phone: tempData.phoneNumber,
+                dateOfBirth: tempData.dateOfBirth,
+                city: tempData.city,
+                language: tempData.language
+            });
+            setProfileData({ ...tempData });
+            setShowSuccessModal(true);
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleBackPress = () => {
@@ -65,6 +107,14 @@ export default function ProfileScreen() {
         // @ts-ignore
         navigation.replace('Login');
     };
+
+    if (isLoading && !isEditMode) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+                <ActivityIndicator size="large" color="#FFD700" />
+            </View>
+        );
+    }
 
     if (isEditMode) {
         return (

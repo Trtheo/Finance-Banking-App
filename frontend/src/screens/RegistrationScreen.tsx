@@ -26,6 +26,8 @@ const RWANDA_BANKS = [
     { id: 'cogebanque', name: 'Cogebanque' },
 ];
 
+import * as authService from '../services/authService';
+
 // @ts-ignore
 export default function RegistrationScreen({ navigation }) {
     const [fullName, setFullName] = useState('');
@@ -40,8 +42,9 @@ export default function RegistrationScreen({ navigation }) {
 
     const [selectedBank, setSelectedBank] = useState<null | typeof RWANDA_BANKS[0]>(null);
     const [isBankModalVisible, setIsBankModalVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleRegister = () => {
+    const handleRegister = async () => {
         if (!fullName || !email || !phoneNumber || !selectedBank || !password || !confirmPassword) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
@@ -52,16 +55,26 @@ export default function RegistrationScreen({ navigation }) {
             return;
         }
 
-        console.log('Registering with:', {
-            fullName,
-            email,
-            phoneNumber,
-            password,
-            bank: selectedBank.name
-        });
+        try {
+            setIsLoading(true);
+            const userData = {
+                fullName,
+                email,
+                phoneNumber: `250${phoneNumber.replace(/^0/, '')}`, // Ensure standard format
+                password,
+                bank: selectedBank.name
+            };
 
-        // TODO: Implement API call
-        navigation.navigate('Login');
+            await authService.register(userData);
+
+            Alert.alert('Success', 'Account created successfully!', [
+                { text: 'OK', onPress: () => navigation.navigate('Login') }
+            ]);
+        } catch (error: any) {
+            Alert.alert('Registration Failed', error.response?.data?.message || error.message || 'An error occurred');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const renderBankItem = ({ item }: { item: typeof RWANDA_BANKS[0] }) => (
@@ -185,8 +198,14 @@ export default function RegistrationScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-                            <Text style={styles.registerButtonText}>Register</Text>
+                        <TouchableOpacity
+                            style={[styles.registerButton, isLoading && { opacity: 0.7 }]}
+                            onPress={handleRegister}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.registerButtonText}>
+                                {isLoading ? 'Processing...' : 'Register'}
+                            </Text>
                         </TouchableOpacity>
 
                         <View style={styles.dividerContainer}>

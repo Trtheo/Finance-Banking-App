@@ -1,46 +1,86 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import * as transactionService from '../services/transactionService';
 
-const DATA = [
-  {
-    title: "Today",
-    data: [
-      { id: '1', name: 'Apple services', date: '17 / 02 / 2025 • 10:32', amount: '- $50.00', type: 'expense', icon: 'apple' },
-      { id: '2', name: 'Transfer to Sam', date: '17 / 02 / 2025 • 15:28', amount: '- $200.00', type: 'expense', icon: 'arrow-up' },
-    ],
-  },
-  {
-    title: "10 February 2025",
-    data: [
-      { id: '3', name: 'Withdraw from Paypal', date: '10 / 02 / 2025 • 13:54', amount: '+ $120.00', type: 'income', icon: 'paypal' },
-      { id: '4', name: 'Lisa requested payment', date: '10 / 02 / 2025 • 11:28', amount: '- $72.00', type: 'expense', isUser: true },
-      { id: '5', name: 'Transfer to Hana', date: '10 / 02 / 2025 • 09:32', amount: '- $18.00', type: 'expense', icon: 'arrow-up' },
-    ],
-  },
-];
-
-const TransactionItem = ({ item }: any) => (
-  <View style={styles.itemRow}>
-    <View style={styles.iconContainer}>
-      {item.icon === 'apple' && <FontAwesome5 name="apple" size={20} color="black" />}
-      {item.icon === 'paypal' && <FontAwesome5 name="paypal" size={20} color="black" />}
-      {item.icon === 'arrow-up' && <Ionicons name="arrow-up" size={20} color="black" />}
-      {item.isUser && <View style={styles.avatarPlaceholder} />}
+const TransactionItem = ({ item }: any) => {
+  const isIncome = item.type === 'DEPOSIT' || item.type === 'TRANSFER_RECEIVE';
+  return (
+    <View style={styles.itemRow}>
+      <View style={styles.iconContainer}>
+        {item.type === 'DEPOSIT' && <Ionicons name="arrow-down" size={20} color="black" />}
+        {item.type === 'WITHDRAW' && <Ionicons name="arrow-up" size={20} color="black" />}
+        {item.type === 'TRANSFER' && <Ionicons name="send-outline" size={20} color="black" />}
+        {item.type === 'TRANSFER_RECEIVE' && <Ionicons name="download-outline" size={20} color="black" />}
+      </View>
+      <View style={styles.details}>
+        <Text style={styles.itemName}>{item.description || item.type}</Text>
+        <Text style={styles.itemDate}>{new Date(item.createdAt).toLocaleString()}</Text>
+      </View>
+      <Text style={[styles.amount, { color: isIncome ? '#27AE60' : '#000' }]}>
+        {isIncome ? '+' : '-'} {item.currency || 'RWF'} {item.amount.toLocaleString()}
+      </Text>
     </View>
-    <View style={styles.details}>
-      <Text style={styles.itemName}>{item.name}</Text>
-      <Text style={styles.itemDate}>{item.date}</Text>
-    </View>
-    <Text style={[styles.amount, { color: item.type === 'income' ? '#27AE60' : '#000' }]}>
-      {item.amount}
-    </Text>
-  </View>
-);
+  );
+};
 
 export default function TransactionsScreen({ navigation }: any) {
   const [filter, setFilter] = useState('All');
+  const [sections, setSections] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const rawData = await transactionService.getHistory();
+
+        // Group by date
+        const groups = rawData.reduce((acc: any, tx: any) => {
+          const date = new Date(tx.createdAt).toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+          if (!acc[date]) acc[date] = [];
+          acc[date].push(tx);
+          return acc;
+        }, {});
+
+        const sectionData = Object.keys(groups).map(date => ({
+          title: date,
+          data: groups[date]
+        }));
+
+        setSections(sectionData);
+      } catch (error: any) {
+        console.error('Error fetching transactions:', error.message);
+        Alert.alert('Error', 'Failed to load transactions');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTransactions();
+  }, []);
+
+  const filteredSections = sections.map(section => ({
+    ...section,
+    data: section.data.filter((tx: any) => {
+      if (filter === 'All') return true;
+      const isIncome = tx.type === 'DEPOSIT' || tx.type === 'TRANSFER_RECEIVE';
+      if (filter === 'Income') return isIncome;
+      if (filter === 'Expense') return !isIncome;
+      return true;
+    })
+  })).filter(section => section.data.length > 0);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#FFDE31" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -54,8 +94,8 @@ export default function TransactionsScreen({ navigation }: any) {
 
       <View style={styles.filterContainer}>
         {['All', 'Income', 'Expense'].map((item) => (
-          <TouchableOpacity 
-            key={item} 
+          <TouchableOpacity
+            key={item}
             onPress={() => setFilter(item)}
             style={[styles.filterBtn, filter === item && styles.filterBtnActive]}
           >
@@ -64,23 +104,18 @@ export default function TransactionsScreen({ navigation }: any) {
         ))}
       </View>
 
-      <View style={styles.subFilterRow}>
-        <Text style={styles.filterLabel}>Filter</Text>
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={styles.dropdownText}>Last 30 Days</Text>
-          <Ionicons name="chevron-down" size={16} color="black" />
-        </TouchableOpacity>
-      </View>
-
       <SectionList
-        sections={DATA}
-        keyExtractor={(item) => item.id}
+        sections={filteredSections}
+        keyExtractor={(item) => item._id}
         renderItem={({ item }) => <TransactionItem item={item} />}
         renderSectionHeader={({ section: { title } }) => (
           <Text style={styles.sectionHeader}>{title}</Text>
         )}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 40, color: '#888' }}>No transactions found</Text>
+        }
       />
     </SafeAreaView>
   );
