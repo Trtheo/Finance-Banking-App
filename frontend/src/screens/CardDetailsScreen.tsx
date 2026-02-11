@@ -5,12 +5,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CardDetailsScreen({ navigation, route }: any) {
-    const { cardType, cardNumber, balance, cardholderName, expiryDate, colors } = route.params;
-    const [cardStatus, setCardStatus] = useState(true);
+    const { card } = route.params;
+    const [cardStatus, setCardStatus] = useState(card?.isActive ?? true);
     const [foreignTransactions, setForeignTransactions] = useState(false);
     const [onlineTransactions, setOnlineTransactions] = useState(true);
     const [activeTab, setActiveTab] = useState('detail');
     const [modalVisible, setModalVisible] = useState(false);
+
+    const getCardColors = (cardType: string) => {
+        switch (cardType?.toUpperCase()) {
+            case 'CREDIT':
+                return ['#D4AF37', '#B8941F', '#8B7355'];
+            case 'DEBIT':
+                return ['#2C2C2C', '#1A1A1A'];
+            case 'PREPAID':
+                return ['#4A90E2', '#357ABD'];
+            default:
+                return ['#2C2C2C', '#1A1A1A'];
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -18,7 +31,7 @@ export default function CardDetailsScreen({ navigation, route }: any) {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="chevron-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{cardType}</Text>
+                <Text style={styles.headerTitle}>{card?.cardTier || 'GOLD'} {card?.cardType || 'Card'}</Text>
                 <TouchableOpacity>
                     <Ionicons name="settings-outline" size={24} color="#000" />
                 </TouchableOpacity>
@@ -44,21 +57,23 @@ export default function CardDetailsScreen({ navigation, route }: any) {
                     </TouchableOpacity>
                 </View>
 
-                <LinearGradient colors={colors} style={styles.card}>
+                <LinearGradient colors={getCardColors(card?.cardType)} style={styles.card}>
                     <View style={styles.cardTop}>
                         <Text style={styles.cardBrand}>Nexpay</Text>
                         <View style={styles.chipIcon} />
                     </View>
-                    <Text style={styles.cardNumber}>{cardNumber}</Text>
-                    <Text style={styles.cardBalance}>{balance}</Text>
+                    <Text style={styles.cardNumber}>
+                        •••• •••• •••• {card?.cardNumber?.slice(-4) || '0000'}
+                    </Text>
+                    <Text style={styles.cardBalance}>${card?.balance?.toLocaleString() || '0.00'}</Text>
                     <View style={styles.cardBottom}>
                         <View>
                             <Text style={styles.cardLabel}>Card holder name</Text>
-                            <Text style={styles.cardInfo}>{cardholderName}</Text>
+                            <Text style={styles.cardInfo}>{card?.cardholderName || 'Name'}</Text>
                         </View>
                         <View>
                             <Text style={styles.cardLabel}>Expiry date</Text>
-                            <Text style={styles.cardInfo}>{expiryDate}</Text>
+                            <Text style={styles.cardInfo}>{card?.expiryDate || 'MM/YY'}</Text>
                         </View>
                     </View>
                 </LinearGradient>
@@ -146,27 +161,27 @@ export default function CardDetailsScreen({ navigation, route }: any) {
 
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Card Type</Text>
-                                <Text style={styles.infoValue}>Platinum</Text>
+                                <Text style={styles.infoValue}>{card?.cardTier || 'GOLD'}</Text>
                             </View>
 
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Account Holder</Text>
-                                <Text style={styles.infoValue}>{cardholderName}</Text>
+                                <Text style={styles.infoValue}>{card?.cardholderName || 'Name'}</Text>
                             </View>
 
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Account Number</Text>
-                                <Text style={styles.infoValue}>3789 1054 9763 3014</Text>
+                                <Text style={styles.infoValue}>{card?.cardNumber || '0000 0000 0000 0000'}</Text>
                             </View>
 
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Expiry Date</Text>
-                                <Text style={styles.infoValue}>{expiryDate}</Text>
+                                <Text style={styles.infoValue}>{card?.expiryDate || 'MM/YY'}</Text>
                             </View>
 
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>CVV</Text>
-                                <Text style={styles.infoValue}>475</Text>
+                                <Text style={styles.infoValue}>{card?.cvv || '***'}</Text>
                             </View>
 
                             <TouchableOpacity style={styles.actionRow}>
