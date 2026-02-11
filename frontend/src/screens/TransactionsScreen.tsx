@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as transactionService from '../services/transactionService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TransactionItem = ({ item }: any) => {
-  const isIncome = item.type === 'DEPOSIT' || item.type === 'TRANSFER_RECEIVE';
+const TransactionItem = ({ item, currentUserId }: any) => {
+  const isTransferIn = item.type === 'TRANSFER' && String(item.receiverId) === String(currentUserId);
+  const isIncome = item.type === 'DEPOSIT' || isTransferIn;
+
+  const displayType = item.type === 'TRANSFER'
+    ? isTransferIn
+      ? 'TRANSFER_RECEIVE'
+      : 'TRANSFER'
+    : item.type;
   return (
     <View style={styles.itemRow}>
       <View style={styles.iconContainer}>
-        {item.type === 'DEPOSIT' && <Ionicons name="arrow-down" size={20} color="black" />}
-        {item.type === 'WITHDRAW' && <Ionicons name="arrow-up" size={20} color="black" />}
-        {item.type === 'TRANSFER' && <Ionicons name="send-outline" size={20} color="black" />}
-        {item.type === 'TRANSFER_RECEIVE' && <Ionicons name="download-outline" size={20} color="black" />}
+        {displayType === 'DEPOSIT' && <Ionicons name="arrow-down" size={20} color="black" />}
+        {displayType === 'WITHDRAW' && <Ionicons name="arrow-up" size={20} color="black" />}
+        {displayType === 'TRANSFER' && <Ionicons name="send-outline" size={20} color="black" />}
+        {displayType === 'TRANSFER_RECEIVE' && <Ionicons name="download-outline" size={20} color="black" />}
       </View>
       <View style={styles.details}>
         <Text style={styles.itemName}>{item.description || item.type}</Text>
@@ -29,10 +37,19 @@ export default function TransactionsScreen({ navigation }: any) {
   const [filter, setFilter] = useState('All');
   const [sections, setSections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          if (parsed?._id) {
+            setCurrentUserId(parsed._id);
+          }
+        }
+
         const rawData = await transactionService.getHistory();
 
         // Group by date
@@ -67,7 +84,7 @@ export default function TransactionsScreen({ navigation }: any) {
     ...section,
     data: section.data.filter((tx: any) => {
       if (filter === 'All') return true;
-      const isIncome = tx.type === 'DEPOSIT' || tx.type === 'TRANSFER_RECEIVE';
+      const isIncome = tx.type === 'DEPOSIT' || (tx.type === 'TRANSFER' && String(tx.receiverId) === String(currentUserId));
       if (filter === 'Income') return isIncome;
       if (filter === 'Expense') return !isIncome;
       return true;
@@ -107,7 +124,7 @@ export default function TransactionsScreen({ navigation }: any) {
       <SectionList
         sections={filteredSections}
         keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <TransactionItem item={item} />}
+        renderItem={({ item }) => <TransactionItem item={item} currentUserId={currentUserId} />}
         renderSectionHeader={({ section: { title } }) => (
           <Text style={styles.sectionHeader}>{title}</Text>
         )}

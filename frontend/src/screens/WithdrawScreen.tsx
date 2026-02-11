@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as transactionService from '../services/transactionService';
 
 export default function WithdrawScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
@@ -11,18 +12,19 @@ export default function WithdrawScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleWithdraw = async () => {
-        if (!amount || parseFloat(amount) <= 0) {
+        const numAmount = parseFloat(amount);
+        if (!amount || isNaN(numAmount) || numAmount <= 0) {
             Alert.alert('Error', 'Please enter a valid amount');
             return;
         }
 
         setIsLoading(true);
         try {
-            // TODO: Implement withdraw API call
-            Alert.alert('Success', 'Withdrawal request submitted successfully!');
+            await transactionService.withdraw(numAmount, description.trim() || undefined);
+            Alert.alert('Success', `Successfully withdrew RWF ${numAmount.toLocaleString()}`);
             navigation.goBack();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to process withdrawal');
+        } catch (error: any) {
+            Alert.alert('Withdrawal Failed', error.response?.data?.message || error.message || 'Failed to process withdrawal');
         } finally {
             setIsLoading(false);
         }

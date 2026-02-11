@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as transactionService from '../services/transactionService';
 
 export default function DepositScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
@@ -11,18 +12,19 @@ export default function DepositScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleDeposit = async () => {
-        if (!amount || parseFloat(amount) <= 0) {
+        const numAmount = parseFloat(amount);
+        if (!amount || isNaN(numAmount) || numAmount <= 0) {
             Alert.alert('Error', 'Please enter a valid amount');
             return;
         }
 
         setIsLoading(true);
         try {
-            // TODO: Implement deposit API call
-            Alert.alert('Success', 'Deposit request submitted successfully!');
+            await transactionService.deposit(numAmount, description.trim() || undefined);
+            Alert.alert('Success', `Successfully deposited RWF ${numAmount.toLocaleString()}`);
             navigation.goBack();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to process deposit');
+        } catch (error: any) {
+            Alert.alert('Deposit Failed', error.response?.data?.message || error.message || 'Failed to process deposit');
         } finally {
             setIsLoading(false);
         }
