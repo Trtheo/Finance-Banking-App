@@ -1,15 +1,95 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { styles } from './AddCardScreen.styles';
 
-export default function AddCardScreen({ navigation }: any) {
-    const [cardType, setCardType] = useState('');
+interface NavigationProps {
+    navigate: (screen: string) => void;
+    goBack: () => void;
+}
+
+interface AddCardScreenProps {
+    navigation: NavigationProps;
+}
+
+export default function AddCardScreen({ navigation }: AddCardScreenProps) {
+    const [cardType, setCardType] = useState('DEBIT');
+    const [cardTier, setCardTier] = useState('GOLD');
     const [cardholderName, setCardholderName] = useState('');
     const [cardNumber, setCardNumber] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
     const [cvv, setCvv] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [showCardTypes, setShowCardTypes] = useState(false);
+    const [showCardTiers, setShowCardTiers] = useState(false);
+
+    const cardTypes = ['DEBIT', 'CREDIT', 'PREPAID'];
+    const cardTiers = ['GOLD', 'PLATINUM'];
+
+    const generateCardNumber = useCallback(() => {
+        const prefix = '4532';
+        let number = prefix;
+        for (let i = 4; i < 16; i++) {
+            number += Math.floor(Math.random() * 10);
+        }
+        return number.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }, []);
+
+    const generateExpiryDate = useCallback(() => {
+        const now = new Date();
+        const futureDate = new Date(now.getFullYear() + 3, now.getMonth());
+        const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+        const year = String(futureDate.getFullYear()).slice(-2);
+        return `${month}/${year}`;
+    }, []);
+
+    useEffect(() => {
+        setCardNumber(generateCardNumber());
+        setExpiryDate(generateExpiryDate());
+    }, [cardType, generateCardNumber, generateExpiryDate]);
+
+    const handleAddCard = async () => {
+        if (!cardholderName || !cvv) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        if (cvv.length !== 6) {
+            Alert.alert('Error', 'Please enter a valid 6-digit CVV');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const newCard = {
+                _id: Date.now().toString(),
+                cardType,
+                cardTier,
+                cardholderName,
+                cardNumber: cardNumber.replace(/\s/g, ''),
+                expiryDate,
+                cvv,
+                balance: 0,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            };
+            
+            const existingCards = await AsyncStorage.getItem('userCards');
+            const cards = existingCards ? JSON.parse(existingCards) : [];
+            cards.push(newCard);
+            await AsyncStorage.setItem('userCards', JSON.stringify(cards));
+            
+            navigation.navigate('CardManagement');
+        } catch (error) {
+            console.error('Card creation error:', error);
+            Alert.alert('Error', 'Failed to save card');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -21,32 +101,91 @@ export default function AddCardScreen({ navigation }: any) {
                 <View style={{ width: 24 }} />
             </View>
 
-            <View style={styles.content}>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView 
+                    style={styles.content} 
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
                 <LinearGradient colors={['#2C2C2C', '#1A1A1A']} style={styles.card}>
                     <View style={styles.cardTop}>
                         <Text style={styles.cardBrand}>Nexpay</Text>
                         <View style={styles.chipIcon} />
                     </View>
-                    <Text style={styles.cardNumber}>•••• •••• •••• 0000</Text>
+                    <Text style={styles.cardNumber}>{cardNumber || '•••• •••• •••• 0000'}</Text>
                     <Text style={styles.cardBalance}>$0.00</Text>
                     <View style={styles.cardBottom}>
                         <View>
                             <Text style={styles.cardLabel}>Card holder name</Text>
-                            <Text style={styles.cardInfo}>Name</Text>
+                            <Text style={styles.cardInfo}>{cardholderName || 'Name'}</Text>
                         </View>
                         <View>
                             <Text style={styles.cardLabel}>Expiry date</Text>
-                            <Text style={styles.cardInfo}>MM/DD</Text>
+                            <Text style={styles.cardInfo}>{expiryDate || 'MM/YY'}</Text>
                         </View>
                     </View>
                 </LinearGradient>
 
                 <Text style={styles.label}>Card Type</Text>
-                <TouchableOpacity style={styles.input}>
+                <TouchableOpacity 
+                    style={styles.input} 
+                    onPress={() => setShowCardTypes(!showCardTypes)}
+                >
                     <Ionicons name="card-outline" size={20} color="#999" />
-                    <Text style={styles.inputPlaceholder}>Select your card type</Text>
+                    <Text style={[styles.inputPlaceholder, cardType && { color: '#000' }]}>
+                        {cardType || 'Select your card type'}
+                    </Text>
                     <Ionicons name="chevron-down" size={20} color="#999" />
                 </TouchableOpacity>
+                
+                {showCardTypes && (
+                    <View style={styles.dropdown}>
+                        {cardTypes.map((type) => (
+                            <TouchableOpacity
+                                key={type}
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                    setCardType(type);
+                                    setShowCardTypes(false);
+                                }}
+                            >
+                                <Text style={styles.dropdownText}>{type}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+
+                <Text style={styles.label}>Card Tier</Text>
+                <TouchableOpacity 
+                    style={styles.input} 
+                    onPress={() => setShowCardTiers(!showCardTiers)}
+                >
+                    <Ionicons name="diamond-outline" size={20} color="#999" />
+                    <Text style={[styles.inputPlaceholder, cardTier && { color: '#000' }]}>
+                        {cardTier || 'Select card tier'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#999" />
+                </TouchableOpacity>
+                
+                {showCardTiers && (
+                    <View style={styles.dropdown}>
+                        {cardTiers.map((tier) => (
+                            <TouchableOpacity
+                                key={tier}
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                    setCardTier(tier);
+                                    setShowCardTiers(false);
+                                }}
+                            >
+                                <Text style={styles.dropdownText}>{tier}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
 
                 <Text style={styles.label}>Cardholder Name</Text>
                 <View style={styles.input}>
@@ -60,167 +199,52 @@ export default function AddCardScreen({ navigation }: any) {
                     />
                 </View>
 
-                <Text style={styles.label}>Card Number</Text>
-                <View style={styles.input}>
+                <Text style={styles.label}>Card Number (Auto-generated)</Text>
+                <View style={[styles.input, { backgroundColor: '#F8F8F8' }]}>
                     <Ionicons name="card-outline" size={20} color="#999" />
+                    <Text style={[styles.textInput, { color: '#666' }]}>{cardNumber}</Text>
+                    <TouchableOpacity onPress={() => setCardNumber(generateCardNumber())}>
+                        <Ionicons name="refresh" size={20} color="#666" />
+                    </TouchableOpacity>
+                </View>
+
+                <Text style={styles.label}>Expiry Date (Auto-generated)</Text>
+                <View style={[styles.input, { backgroundColor: '#F8F8F8' }]}>
+                    <Ionicons name="calendar-outline" size={20} color="#999" />
+                    <Text style={[styles.textInput, { color: '#666' }]}>{expiryDate}</Text>
+                    <TouchableOpacity onPress={() => setExpiryDate(generateExpiryDate())}>
+                        <Ionicons name="refresh" size={20} color="#666" />
+                    </TouchableOpacity>
+                </View>
+
+                <Text style={styles.label}>CVV</Text>
+                <View style={styles.input}>
                     <TextInput
                         style={styles.textInput}
-                        placeholder="Enter your card number"
+                        placeholder="6 digits"
                         placeholderTextColor="#999"
-                        value={cardNumber}
-                        onChangeText={setCardNumber}
+                        value={cvv}
+                        onChangeText={setCvv}
                         keyboardType="numeric"
+                        maxLength={6}
+                        secureTextEntry
                     />
+                    <Ionicons name="help-circle-outline" size={20} color="#999" />
                 </View>
 
-                <View style={styles.row}>
-                    <View style={{ flex: 1, marginRight: 10 }}>
-                        <Text style={styles.label}>Expiry Date</Text>
-                        <View style={styles.input}>
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="MM/YY"
-                                placeholderTextColor="#999"
-                                value={expiryDate}
-                                onChangeText={setExpiryDate}
-                            />
-                        </View>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.label}>CVV</Text>
-                        <View style={styles.input}>
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="3 digits"
-                                placeholderTextColor="#999"
-                                value={cvv}
-                                onChangeText={setCvv}
-                                keyboardType="numeric"
-                                maxLength={3}
-                            />
-                            <Ionicons name="help-circle-outline" size={20} color="#999" />
-                        </View>
-                    </View>
-                </View>
-
-                <TouchableOpacity style={styles.addButton}>
-                    <Text style={styles.addButtonText}>Add Card</Text>
+                <TouchableOpacity 
+                    style={[styles.addButton, isLoading && styles.disabledButton]} 
+                    onPress={handleAddCard}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#000" />
+                    ) : (
+                        <Text style={styles.addButtonText}>Add Card</Text>
+                    )}
                 </TouchableOpacity>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F5F5F5',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#000',
-    },
-    content: {
-        flex: 1,
-        paddingHorizontal: 20,
-    },
-    card: {
-        borderRadius: 16,
-        padding: 20,
-        height: 200,
-        justifyContent: 'space-between',
-        marginBottom: 30,
-    },
-    cardTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    cardBrand: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#FFF',
-    },
-    chipIcon: {
-        width: 40,
-        height: 30,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        borderRadius: 6,
-    },
-    cardNumber: {
-        fontSize: 18,
-        color: '#FFF',
-        letterSpacing: 2,
-        marginTop: 10,
-    },
-    cardBalance: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#FFF',
-        marginTop: 5,
-    },
-    cardBottom: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 10,
-    },
-    cardLabel: {
-        fontSize: 10,
-        color: 'rgba(255,255,255,0.7)',
-        marginBottom: 4,
-    },
-    cardInfo: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#FFF',
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#000',
-        marginBottom: 8,
-        marginTop: 15,
-    },
-    input: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        paddingVertical: 15,
-        gap: 10,
-    },
-    inputPlaceholder: {
-        flex: 1,
-        fontSize: 14,
-        color: '#999',
-    },
-    textInput: {
-        flex: 1,
-        fontSize: 14,
-        color: '#000',
-    },
-    row: {
-        flexDirection: 'row',
-    },
-    addButton: {
-        backgroundColor: '#E0E0E0',
-        borderRadius: 12,
-        paddingVertical: 16,
-        alignItems: 'center',
-        marginTop: 30,
-    },
-    addButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#000',
-    },
-});
