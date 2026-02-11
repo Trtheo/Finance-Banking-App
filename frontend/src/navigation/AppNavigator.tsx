@@ -10,6 +10,7 @@ import TransactionsScreen from "../screens/TransactionsScreen";
 import AddCardScreen from "../screens/AddCardScreen";
 import CardDetailsScreen from "../screens/CardDetailsScreen";
 import OTPVerificationScreen from "../screens/OTPVerificationScreen";
+import NotificationScreen from "../screens/NotificationScreen";
 
 const Stack = createStackNavigator();
 
@@ -30,6 +31,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AddCard" component={AddCardScreen} />
         <Stack.Screen name="CardDetails" component={CardDetailsScreen} />
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+        <Stack.Screen name="Notification" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

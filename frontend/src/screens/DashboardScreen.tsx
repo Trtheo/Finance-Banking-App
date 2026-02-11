@@ -80,7 +80,7 @@ export default function DashboardScreen({ navigation }: any) {
                     <Text style={styles.welcomeText}>Welcome back,</Text>
                     <Text style={styles.userName}>Nexpay User</Text>
                 </View>
-                <TouchableOpacity style={styles.notifBtn}>
+                <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Notification')}>
                     <Ionicons name="notifications-outline" size={24} color="black" />
                     <View style={styles.notifBadge} />
                 </TouchableOpacity>
