@@ -16,16 +16,12 @@ export default function DepositScreen({ navigation }: any) {
             return;
         }
 
-        setIsLoading(true);
-        try {
-            // TODO: Implement deposit API call
-            Alert.alert('Success', 'Deposit request submitted successfully!');
-            navigation.goBack();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to process deposit');
-        } finally {
-            setIsLoading(false);
-        }
+        // Navigate to OTP verification with deposit data
+        navigation.navigate('OTPVerification', {
+            type: 'deposit',
+            amount: parseFloat(amount),
+            description: description || 'Deposit'
+        });
     };
 
     return (
@@ -64,15 +60,10 @@ export default function DepositScreen({ navigation }: any) {
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.depositButton, isLoading && styles.disabledButton]}
+                        style={styles.depositButton}
                         onPress={handleDeposit}
-                        disabled={isLoading}
                     >
-                        {isLoading ? (
-                            <ActivityIndicator color="black" />
-                        ) : (
-                            <Text style={styles.buttonText}>Deposit</Text>
-                        )}
+                        <Text style={styles.buttonText}>Continue</Text>
                     </TouchableOpacity>
                 </View>
             </View>
