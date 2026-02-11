@@ -4,6 +4,10 @@ import Wallet from '../models/Wallet';
 import User from '../models/User';
 import { v4 as uuidv4 } from 'uuid';
 import { sendTransactionEmail } from './notification.service';
+import { createInAppNotification } from './inAppNotification.service';
+import { NotificationType } from '../models/Notification';
+
+const formatCurrency = (amount: number) => `RWF ${amount.toLocaleString()}`;
 
 /**
  * Create a deposit transaction
@@ -38,6 +42,15 @@ export const createDeposit = async (userId: string, amount: number, description?
         // 4. Send notification (non-blocking)
         const user = await User.findById(userId);
         if (user && transaction[0]) {
+            createInAppNotification({
+                userId,
+                type: NotificationType.DEPOSIT,
+                title: 'Deposit successful',
+                message: `Your wallet was credited with ${formatCurrency(amount)}.`,
+                amount,
+                reference: transaction[0].reference
+            }).catch(err => console.error('Deposit in-app notification failed:', err.message));
+
             sendTransactionEmail(user.email, user.fullName, amount, TransactionType.DEPOSIT, {
                 transactionId: transaction[0].reference
             }).catch(err => console.error('Deposit notification failed:', err.message));
@@ -90,6 +103,15 @@ export const createWithdrawal = async (userId: string, amount: number, descripti
         // 5. Send notification (non-blocking)
         const user = await User.findById(userId);
         if (user && transaction[0]) {
+            createInAppNotification({
+                userId,
+                type: NotificationType.WITHDRAW,
+                title: 'Withdrawal successful',
+                message: `${formatCurrency(amount)} was debited from your wallet.`,
+                amount,
+                reference: transaction[0].reference
+            }).catch(err => console.error('Withdrawal in-app notification failed:', err.message));
+
             sendTransactionEmail(user.email, user.fullName, amount, TransactionType.WITHDRAW, {
                 transactionId: transaction[0].reference
             }).catch(err => console.error('Withdrawal notification failed:', err.message));
@@ -160,6 +182,15 @@ export const createTransfer = async (senderId: string, receiverAccountNumber: st
         ]);
 
         if (sender && transaction[0]) {
+            createInAppNotification({
+                userId: senderId,
+                type: NotificationType.TRANSFER_SENT,
+                title: 'Transfer successful',
+                message: `You sent ${formatCurrency(amount)} to ${receiver?.fullName || receiverAccountNumber}.`,
+                amount,
+                reference: transaction[0].reference
+            }).catch(err => console.error('Transfer sender in-app notification failed:', err.message));
+
             sendTransactionEmail(sender.email, sender.fullName, amount, TransactionType.TRANSFER, {
                 transactionId: transaction[0].reference,
                 accountNumber: receiverAccountNumber,
@@ -168,6 +199,15 @@ export const createTransfer = async (senderId: string, receiverAccountNumber: st
         }
 
         if (receiver && transaction[0]) {
+            createInAppNotification({
+                userId: receiverWallet.userId.toString(),
+                type: NotificationType.TRANSFER_RECEIVED,
+                title: 'Money received',
+                message: `You received ${formatCurrency(amount)} from ${sender?.fullName || 'Sender'}.`,
+                amount,
+                reference: transaction[0].reference
+            }).catch(err => console.error('Transfer receiver in-app notification failed:', err.message));
+
             sendTransactionEmail(receiver.email, receiver.fullName, amount, TransactionType.DEPOSIT, {
                 transactionId: transaction[0].reference,
                 accountNumber: senderWallet.accountNumber,
