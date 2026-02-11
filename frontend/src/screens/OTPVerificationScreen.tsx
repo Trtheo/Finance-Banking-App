@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as authService from '../services/authService';
+import * as transactionService from '../services/transactionService';
 
 // @ts-ignore
 export default function OTPVerificationScreen({ navigation, route }) {
@@ -29,13 +30,8 @@ export default function OTPVerificationScreen({ navigation, route }) {
             setIsLoading(true);
             
             if (type === 'withdraw') {
-                // TODO: Call withdraw API with amount and description
-                Alert.alert('Success', `Withdrawal of $${amount} completed successfully!`, [
-                    { text: 'OK', onPress: () => navigation.navigate('Main') }
-                ]);
-            } else if (type === 'deposit') {
-                // TODO: Call deposit API with amount and description
-                Alert.alert('Success', `Deposit of $${amount} completed successfully!`, [
+                await transactionService.withdraw(amount, description);
+                Alert.alert('Success', `Withdrawal of RWF ${Number(amount).toLocaleString()} completed successfully!`, [
                     { text: 'OK', onPress: () => navigation.navigate('Main') }
                 ]);
             } else {
@@ -65,21 +61,18 @@ export default function OTPVerificationScreen({ navigation, route }) {
                     <View style={styles.header}>
                         <Text style={styles.logoText}>Nexpay</Text>
                         <Text style={styles.title}>
-                            {type === 'withdraw' ? 'Confirm Withdrawal' : 
-                             type === 'deposit' ? 'Confirm Deposit' : 'Verification'}
+                            {type === 'withdraw' ? 'Confirm Withdrawal' : 'Verification'}
                         </Text>
                         <Text style={styles.subtitle}>
                             {type === 'withdraw' 
                                 ? `Enter your PIN to confirm withdrawal of $${amount}` 
-                                : type === 'deposit'
-                                ? `Enter your PIN to confirm deposit of $${amount}`
                                 : `Enter the 6-digit code sent to ${email}`
                             }
                         </Text>
                     </View>
 
                     <View style={styles.formContainer}>
-                        <Text style={styles.label}>{(type === 'withdraw' || type === 'deposit') ? 'Enter PIN' : 'OTP Code'}</Text>
+                        <Text style={styles.label}>{type === 'withdraw' ? 'Enter PIN' : 'OTP Code'}</Text>
                         <View style={styles.inputContainer}>
                             <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.icon} />
                             <TextInput
@@ -100,8 +93,7 @@ export default function OTPVerificationScreen({ navigation, route }) {
                         >
                             <Text style={styles.verifyButtonText}>
                                 {isLoading ? 'Processing...' : 
-                                 type === 'withdraw' ? 'Confirm Withdrawal' :
-                                 type === 'deposit' ? 'Confirm Deposit' : 'Verify & Login'}
+                                 type === 'withdraw' ? 'Confirm Withdrawal' : 'Verify & Login'}
                             </Text>
                         </TouchableOpacity>
 

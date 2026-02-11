@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as walletService from '../services/walletService';
 import * as transactionService from '../services/transactionService';
+import * as notificationService from '../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -39,15 +41,18 @@ export default function DashboardScreen({ navigation }: any) {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const fetchData = async () => {
         try {
-            const [walletData, transData] = await Promise.all([
+            const [walletData, transData, unread] = await Promise.all([
                 walletService.getWalletMe(),
-                transactionService.getHistory()
+                transactionService.getHistory(),
+                notificationService.getUnreadCount(),
             ]);
             setWallet(walletData);
             setTransactions(transData.slice(0, 5));
+            setUnreadCount(unread);
         } catch (error: any) {
             console.error('Error fetching dashboard data:', error.message);
         } finally {
@@ -59,6 +64,21 @@ export default function DashboardScreen({ navigation }: any) {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const refreshUnreadCount = async () => {
+                try {
+                    const unread = await notificationService.getUnreadCount();
+                    setUnreadCount(unread);
+                } catch (error: any) {
+                    console.error('Error fetching unread notifications count:', error.message);
+                }
+            };
+
+            refreshUnreadCount();
+        }, [])
+    );
 
     const onRefresh = () => {
         setIsRefreshing(true);
@@ -82,7 +102,11 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
                 <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Notification')}>
                     <Ionicons name="notifications-outline" size={24} color="black" />
-                    <View style={styles.notifBadge} />
+                    {unreadCount > 0 && (
+                        <View style={styles.notifBadge}>
+                            <Text style={styles.notifBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -161,9 +185,20 @@ const styles = StyleSheet.create({
         justifyContent: 'center', alignItems: 'center', elevation: 2
     },
     notifBadge: {
-        position: 'absolute', top: 12, right: 12, width: 8, height: 8,
-        borderRadius: 4, backgroundColor: '#FF5252', borderWidth: 1.5, borderColor: '#FFF'
+        position: 'absolute',
+        top: 4,
+        right: 2,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        paddingHorizontal: 4,
+        backgroundColor: '#FF5252',
+        borderWidth: 1,
+        borderColor: '#FFF',
+        justifyContent: 'center',
+        alignItems: 'center'
     },
+    notifBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
     scrollContent: { paddingTop: 10 },
     cardContainer: { paddingHorizontal: 25, marginBottom: 30 },
     mainCard: {

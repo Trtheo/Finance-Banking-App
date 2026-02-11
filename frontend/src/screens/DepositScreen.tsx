@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as transactionService from '../services/transactionService';
 
 export default function DepositScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
@@ -11,17 +12,23 @@ export default function DepositScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleDeposit = async () => {
-        if (!amount || parseFloat(amount) <= 0) {
+        const numAmount = parseFloat(amount);
+        if (!amount || isNaN(numAmount) || numAmount <= 0) {
             Alert.alert('Error', 'Please enter a valid amount');
             return;
         }
 
-        // Navigate to OTP verification with deposit data
-        navigation.navigate('OTPVerification', {
-            type: 'deposit',
-            amount: parseFloat(amount),
-            description: description || 'Deposit'
-        });
+        try {
+            setIsLoading(true);
+            await transactionService.deposit(numAmount, description || 'Deposit');
+            Alert.alert('Success', `Deposit of RWF ${numAmount.toLocaleString()} completed successfully!`, [
+                { text: 'OK', onPress: () => navigation.navigate('Main') }
+            ]);
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Deposit failed');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -60,10 +67,15 @@ export default function DepositScreen({ navigation }: any) {
                     </View>
 
                     <TouchableOpacity
-                        style={styles.depositButton}
+                        style={[styles.depositButton, isLoading && styles.disabledButton]}
                         onPress={handleDeposit}
+                        disabled={isLoading}
                     >
-                        <Text style={styles.buttonText}>Continue</Text>
+                        {isLoading ? (
+                            <ActivityIndicator color="#000" />
+                        ) : (
+                            <Text style={styles.buttonText}>Deposit Now</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>

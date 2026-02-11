@@ -11,7 +11,8 @@ export default function WithdrawScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleWithdraw = async () => {
-        if (!amount || parseFloat(amount) <= 0) {
+        const numAmount = parseFloat(amount);
+        if (!amount || isNaN(numAmount) || numAmount <= 0) {
             Alert.alert('Error', 'Please enter a valid amount');
             return;
         }

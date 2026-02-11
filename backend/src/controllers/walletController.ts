@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Wallet from '../models/Wallet';
-import Transaction from '../models/Transaction';
+import * as transactionService from '../services/transactionService';
 
 export const deposit = async (req: Request, res: Response) => {
     try {
@@ -11,30 +11,17 @@ export const deposit = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
+        const transaction = await transactionService.createDeposit(userId, parseFloat(amount), description);
         const wallet = await Wallet.findOne({ userId });
-        if (!wallet) {
-            return res.status(404).json({ message: 'Wallet not found' });
-        }
-
-        wallet.balance += parseFloat(amount);
-        await wallet.save();
-
-        const transaction = new Transaction({
-            userId,
-            type: 'DEPOSIT',
-            amount: parseFloat(amount),
-            description: description || 'Deposit',
-            status: 'COMPLETED'
-        });
-        await transaction.save();
 
         res.json({
             message: 'Deposit successful',
-            balance: wallet.balance,
+            balance: wallet?.balance ?? 0,
             transaction
         });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
+        const message = error instanceof Error ? error.message : 'Server error';
+        res.status(400).json({ message });
     }
 };
 
@@ -47,34 +34,17 @@ export const withdraw = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
+        const transaction = await transactionService.createWithdrawal(userId, parseFloat(amount), description);
         const wallet = await Wallet.findOne({ userId });
-        if (!wallet) {
-            return res.status(404).json({ message: 'Wallet not found' });
-        }
-
-        if (wallet.balance < parseFloat(amount)) {
-            return res.status(400).json({ message: 'Insufficient balance' });
-        }
-
-        wallet.balance -= parseFloat(amount);
-        await wallet.save();
-
-        const transaction = new Transaction({
-            userId,
-            type: 'WITHDRAWAL',
-            amount: parseFloat(amount),
-            description: description || 'Withdrawal',
-            status: 'COMPLETED'
-        });
-        await transaction.save();
 
         res.json({
             message: 'Withdrawal successful',
-            balance: wallet.balance,
+            balance: wallet?.balance ?? 0,
             transaction
         });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
+        const message = error instanceof Error ? error.message : 'Server error';
+        res.status(400).json({ message });
     }
 };
 
