@@ -9,6 +9,8 @@ const app: Express = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000',
+  'http://192.168.1.169:3000',
+  'http://192.168.1.169:5000',
   'https://banking-mobile-app.onrender.com',
   'https://banking-mobile-app-staging.onrender.com',
 ];
@@ -97,25 +99,4 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/transactions', transactionRoutes);
 
 
-// Login OTP
-app.post("/login-otp", async (req, res) => {
-  const { email, name, otp } = req.body;
-  try {
-    await sendLoginOtp(email, name, otp);
-    res.json({ message: "OTP email sent successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Failed to send OTP email" });
-  }
-});
-
-// Transaction alert
-app.post("/transaction", async (req, res) => {
-  const { email, name, amount, type } = req.body;
-  try {
-    await sendTransactionEmail(email, name, amount, type);
-    res.json({ message: "Transaction email sent successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Failed to send transaction email" });
-  }
-});
 export { app };

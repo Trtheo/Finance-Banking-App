@@ -103,6 +103,11 @@ export const loginUser = async (loginData: any) => {
 
     // Send OTP email in the background (non-blocking)
     // Don't await or throw - we want login to succeed even if email fails
+    console.log('\n' + '='.repeat(50));
+    console.log(`🔥 [DEV] YOUR OTP IS: ${otp} 🔥`);
+    console.log(`For user: ${user.email}`);
+    console.log('='.repeat(50) + '\n');
+
     sendLoginOtp(user.email, user.fullName, otp)
         .catch((error) => {
             console.error('⚠️  OTP email failed (still saved in DB):', error.message);
@@ -166,4 +171,23 @@ export const getUserProfile = async (userId: string) => {
     } else {
         throw new Error('User not found');
     }
+};
+
+// Update User Profile
+export const updateUserProfile = async (userId: string, updateData: any) => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    // Update fields if provided
+    if (updateData.fullName) user.fullName = updateData.fullName;
+    if (updateData.email) user.email = updateData.email;
+    if (updateData.phone) user.phoneNumber = updateData.phone;
+    if (updateData.dateOfBirth) user.dateOfBirth = updateData.dateOfBirth;
+    if (updateData.city) user.city = updateData.city;
+    if (updateData.language) user.language = updateData.language;
+
+    const updatedUser = await user.save();
+    return updatedUser;
 };

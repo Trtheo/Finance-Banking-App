@@ -11,16 +11,36 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import * as authService from '../services/authService';
+import { Alert } from 'react-native';
+
 // @ts-ignore
 export default function LoginScreen({ navigation }) {
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = () => {
-        console.log('Logging in with:', { identifier, password });
-        // TODO: Validate credentials
-        navigation.replace('Main');
+    const handleLogin = async () => {
+        if (!identifier || !password) {
+            Alert.alert('Error', 'Please enter both identifier and password');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const response = await authService.login(identifier, password);
+
+            // Navigate to OTP verification screen with user ID
+            navigation.navigate('OTPVerification', {
+                userId: response._id,
+                email: response.email
+            });
+        } catch (error: any) {
+            Alert.alert('Login Failed', error.response?.data?.message || error.message || 'Invalid credentials');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -72,8 +92,14 @@ export default function LoginScreen({ navigation }) {
                             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                            <Text style={styles.loginButtonText}>Login</Text>
+                        <TouchableOpacity
+                            style={[styles.loginButton, isLoading && { opacity: 0.7 }]}
+                            onPress={handleLogin}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.loginButtonText}>
+                                {isLoading ? 'Logging in...' : 'Login'}
+                            </Text>
                         </TouchableOpacity>
 
                         <View style={styles.footer}>

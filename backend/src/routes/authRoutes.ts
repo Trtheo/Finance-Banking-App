@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, verifyLoginOtp, getMe } from '../controllers/authController';
+import { register, login, verifyLoginOtp, getMe, updateProfile } from '../controllers/authController';
 import { protect } from '../middlewares/authMiddleware';
 
 const router = express.Router();
@@ -178,5 +178,40 @@ router.post('/verify-otp', verifyLoginOtp);
  *         description: Not authorized
  */
 router.get('/me', protect, getMe);
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               dateOfBirth:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               language:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Bad request
+ */
+router.put('/profile', protect, updateProfile);
 
 export default router;
