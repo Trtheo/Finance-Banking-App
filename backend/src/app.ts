@@ -93,10 +93,12 @@ app.get('/', (req: Request, res: Response) => {
 import authRoutes from './routes/authRoutes';
 import walletRoutes from './routes/walletRoutes';
 import transactionRoutes from './routes/transactionRoutes';
+import cardRoutes from './routes/cardRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/cards', cardRoutes);
 
 
 export { app };

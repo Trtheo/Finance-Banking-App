@@ -4,6 +4,7 @@ import { app } from './app';
 import connectDB from './config/db';
 import notificationRoutes from "./routes/notification.routes";
 
+
 const PORT = process.env.PORT || 5000;
 
 // Connect to Database
