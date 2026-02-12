@@ -6,9 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import * as walletService from '../services/walletService';
-import * as transactionService from '../services/transactionService';
-import * as notificationService from '../services/notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +36,7 @@ const TransactionItem = ({ name, type, amount, date, icon, color }: any) => (
 
 export default function DashboardScreen({ navigation }: any) {
     const [wallet, setWallet] = useState<any>(null);
+    const [user, setUser] = useState<any>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,14 +44,23 @@ export default function DashboardScreen({ navigation }: any) {
 
     const fetchData = async () => {
         try {
-            const [walletData, transData, unread] = await Promise.all([
-                walletService.getWalletMe(),
-                transactionService.getHistory(),
-                notificationService.getUnreadCount(),
-            ]);
-            setWallet(walletData);
-            setTransactions(transData.slice(0, 5));
-            setUnreadCount(unread);
+            // Get balance from local storage
+            const storedBalance = await AsyncStorage.getItem('userBalance');
+            const balance = storedBalance ? parseFloat(storedBalance) : 1000.00;
+            
+            // Get transactions from local storage
+            const storedTransactions = await AsyncStorage.getItem('internetPayments');
+            const transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+            
+            // Get unread notifications count
+            const storedNotifications = await AsyncStorage.getItem('notifications');
+            const notifications = storedNotifications ? JSON.parse(storedNotifications) : [];
+            const unreadCount = notifications.filter((n: any) => !n.read).length;
+            
+            setWallet({ balance, currency: 'USD', accountNumber: '**** **** 1234' });
+            setTransactions(transactions.slice(0, 5));
+            setUser({ fullName: 'Nexpay User' });
+            setUnreadCount(unreadCount);
         } catch (error: any) {
             console.error('Error fetching dashboard data:', error.message);
         } finally {
@@ -67,16 +75,7 @@ export default function DashboardScreen({ navigation }: any) {
 
     useFocusEffect(
         React.useCallback(() => {
-            const refreshUnreadCount = async () => {
-                try {
-                    const unread = await notificationService.getUnreadCount();
-                    setUnreadCount(unread);
-                } catch (error: any) {
-                    console.error('Error fetching unread notifications count:', error.message);
-                }
-            };
-
-            refreshUnreadCount();
+            fetchData(); // Refresh data when screen comes into focus
         }, [])
     );
 
@@ -98,7 +97,7 @@ export default function DashboardScreen({ navigation }: any) {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.welcomeText}>Welcome back,</Text>
-                    <Text style={styles.userName}>Nexpay User</Text>
+                    <Text style={styles.userName}>{user?.fullName || 'Nexpay User'}</Text>
                 </View>
                 <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Notification')}>
                     <Ionicons name="notifications-outline" size={24} color="black" />
@@ -124,7 +123,7 @@ export default function DashboardScreen({ navigation }: any) {
                             <MaterialCommunityIcons name="dots-horizontal" size={24} color="black" />
                         </View>
                         <Text style={styles.balanceText}>
-                            {wallet?.currency || 'RWF'} {wallet?.balance?.toLocaleString() || '0'}
+                            ${wallet?.balance?.toLocaleString() || '0'}
                         </Text>
                         <View style={styles.cardFooter}>
                             <Text style={styles.accountNo}>{wallet?.accountNumber || '**** **** ****'}</Text>
@@ -149,20 +148,17 @@ export default function DashboardScreen({ navigation }: any) {
                     </View>
 
                     {transactions.length > 0 ? (
-                        transactions.map((tx: any) => {
-                            const isIncome = tx.type === 'DEPOSIT' || (tx.type === 'TRANSFER' && tx.receiverId === wallet?.userId);
-                            return (
-                                <TransactionItem
-                                    key={tx._id}
-                                    name={tx.description || tx.type}
-                                    date={new Date(tx.createdAt).toLocaleDateString()}
-                                    amount={tx.amount}
-                                    type={isIncome ? 'income' : 'expense'}
-                                    icon={isIncome ? 'arrow-down-outline' : 'arrow-up-outline'}
-                                    color={isIncome ? '#E8F5E9' : '#FFEBEE'}
-                                />
-                            );
-                        })
+                        transactions.map((tx: any) => (
+                            <TransactionItem
+                                key={tx.id}
+                                name={tx.type}
+                                date={new Date(tx.date).toLocaleDateString()}
+                                amount={tx.amount}
+                                type='expense'
+                                icon='arrow-up-outline'
+                                color='#FFEBEE'
+                            />
+                        ))
                     ) : (
                         <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No transactions yet</Text>
                     )}

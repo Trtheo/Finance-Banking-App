@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as transactionService from '../services/transactionService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DepositScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
@@ -20,12 +20,53 @@ export default function DepositScreen({ navigation }: any) {
 
         try {
             setIsLoading(true);
-            await transactionService.deposit(numAmount, description || 'Deposit');
-            Alert.alert('Success', `Deposit of RWF ${numAmount.toLocaleString()} completed successfully!`, [
+            
+            // Get current balance
+            const storedBalance = await AsyncStorage.getItem('userBalance');
+            const currentBalance = storedBalance ? parseFloat(storedBalance) : 1000.00;
+            
+            // Add deposit to balance
+            const newBalance = currentBalance + numAmount;
+            await AsyncStorage.setItem('userBalance', newBalance.toString());
+            
+            // Create deposit transaction
+            const transaction = {
+                id: Date.now().toString(),
+                type: 'Deposit',
+                amount: numAmount,
+                description: description || 'Deposit',
+                date: new Date().toISOString(),
+                status: 'Completed'
+            };
+            
+            // Save transaction
+            const existingTransactions = await AsyncStorage.getItem('internetPayments');
+            const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
+            transactions.unshift(transaction);
+            await AsyncStorage.setItem('internetPayments', JSON.stringify(transactions));
+            
+            // Create notification
+            const notification = {
+                id: Date.now().toString(),
+                title: 'Deposit Successful',
+                message: `$${numAmount.toFixed(2)} has been added to your account`,
+                date: new Date().toISOString(),
+                read: false,
+                type: 'deposit',
+                amount: numAmount
+            };
+            
+            // Save notification
+            const existingNotifications = await AsyncStorage.getItem('notifications');
+            const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
+            notifications.unshift(notification);
+            await AsyncStorage.setItem('notifications', JSON.stringify(notifications));
+            
+            Alert.alert('Success', `Deposit of $${numAmount.toFixed(2)} completed successfully! New balance: $${newBalance.toFixed(2)}`, [
                 { text: 'OK', onPress: () => navigation.navigate('Main') }
             ]);
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Deposit failed');
+            Alert.alert('Error', 'Deposit failed. Please try again.');
         } finally {
             setIsLoading(false);
         }

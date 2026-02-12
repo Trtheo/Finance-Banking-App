@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
-import { 
-  Wifi, Zap, Droplets, Tv, Gamepad2, Receipt, ShoppingBag, Smartphone, 
+import {
+  Wifi, Zap, Droplets, Tv, Gamepad2, Receipt, ShoppingBag, Smartphone,
   HeartPulse, Car, Bike, Building2, Wallet, TrendingUp, CreditCard, Gift, X,
   Phone, Home, Plane, GraduationCap, Baby, Coffee, Music, Film, Book, Dumbbell,
   Newspaper, Briefcase, ShoppingCart, Utensils, Bus, Train, Fuel, ParkingCircle
@@ -80,7 +80,7 @@ const MENU_DATA: BillSection[] = [
   },
 ];
 
-export const PayBillsMenu = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+export const PayBillsMenu = ({ visible, onClose, navigation }: { visible: boolean; onClose: () => void; navigation: any }) => {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
@@ -98,7 +98,16 @@ export const PayBillsMenu = ({ visible, onClose }: { visible: boolean; onClose: 
                 <Text style={styles.sectionTitle}>{section.title}</Text>
                 <View style={styles.grid}>
                   {section.data.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.itemContainer}>
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.itemContainer}
+                      onPress={() => {
+                        if (item.label === 'Internet') {
+                          navigation.navigate('InternetPayment');
+                          onClose();
+                        }
+                      }}
+                    >
                       <View style={styles.iconCircle}>
                         {item.icon}
                       </View>

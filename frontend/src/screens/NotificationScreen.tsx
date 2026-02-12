@@ -4,31 +4,27 @@ import {
     SafeAreaView, ActivityIndicator, RefreshControl, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as notificationService from '../services/notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
-type NotificationType = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER_SENT' | 'TRANSFER_RECEIVED';
-
-interface ApiNotification {
-    _id: string;
-    type: NotificationType;
+interface LocalNotification {
+    id: string;
     title: string;
     message: string;
+    date: string;
+    read: boolean;
+    type: string;
     amount?: number;
-    reference?: string;
-    isRead: boolean;
-    createdAt: string;
 }
 
-const getIcon = (type: NotificationType) => {
-    switch (type) {
-        case 'DEPOSIT':
+const getIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+        case 'deposit':
             return { name: 'arrow-down-circle', color: '#2E7D32', bg: '#E8F5E9' };
-        case 'WITHDRAW':
+        case 'withdrawal':
             return { name: 'arrow-up-circle', color: '#C62828', bg: '#FFEBEE' };
-        case 'TRANSFER_SENT':
-            return { name: 'send', color: '#EF6C00', bg: '#FFF3E0' };
-        case 'TRANSFER_RECEIVED':
-            return { name: 'download', color: '#1565C0', bg: '#E3F2FD' };
+        case 'internet payment':
+            return { name: 'card-outline', color: '#EF6C00', bg: '#FFF3E0' };
         default:
             return { name: 'notifications', color: '#9E9E9E', bg: '#F5F5F5' };
     }
@@ -49,12 +45,12 @@ const formatTime = (dateString: string) => (
     new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 );
 
-const NotificationItem = ({ item, onPress }: { item: ApiNotification; onPress: () => void }) => {
+const NotificationItem = ({ item, onPress }: { item: LocalNotification; onPress: () => void }) => {
     const icon = getIcon(item.type);
 
     return (
         <TouchableOpacity
-            style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
+            style={[styles.notificationItem, !item.read && styles.unreadItem]}
             onPress={onPress}
             activeOpacity={0.9}
         >
@@ -65,17 +61,13 @@ const NotificationItem = ({ item, onPress }: { item: ApiNotification; onPress: (
             <View style={styles.contentContainer}>
                 <View style={styles.headerRow}>
                     <Text style={styles.notificationTitle}>{item.title}</Text>
-                    <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
+                    <Text style={styles.timeText}>{formatTime(item.date)}</Text>
                 </View>
 
                 <Text style={styles.notificationMessage}>{item.message}</Text>
 
                 {typeof item.amount === 'number' && (
-                    <Text style={styles.amountText}>RWF {item.amount.toLocaleString()}</Text>
-                )}
-
-                {item.reference && (
-                    <Text style={styles.referenceText}>Ref: {item.reference}</Text>
+                    <Text style={styles.amountText}>${item.amount.toFixed(2)}</Text>
                 )}
             </View>
         </TouchableOpacity>
@@ -93,7 +85,7 @@ const EmptyNotifications = () => (
 );
 
 export default function NotificationScreen({ navigation }: any) {
-    const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+    const [notifications, setNotifications] = useState<LocalNotification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -103,19 +95,22 @@ export default function NotificationScreen({ navigation }: any) {
         }
 
         try {
-            const data = await notificationService.getMyNotifications();
-            setNotifications(data);
+            const storedNotifications = await AsyncStorage.getItem('notifications');
+            const notifications = storedNotifications ? JSON.parse(storedNotifications) : [];
+            setNotifications(notifications);
         } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to load notifications');
+            console.log('Error loading notifications:', error);
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        fetchNotifications(true);
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchNotifications(true);
+        }, [])
+    );
 
     const onRefresh = () => {
         setIsRefreshing(true);
@@ -123,46 +118,26 @@ export default function NotificationScreen({ navigation }: any) {
     };
 
     const markAsRead = async (notificationId: string) => {
-        const target = notifications.find(item => item._id === notificationId);
-        if (!target || target.isRead) {
-            return;
-        }
-
-        setNotifications(prev =>
-            prev.map(item =>
-                item._id === notificationId ? { ...item, isRead: true } : item
-            )
+        const updatedNotifications = notifications.map(item =>
+            item.id === notificationId ? { ...item, read: true } : item
         );
-
-        try {
-            await notificationService.markNotificationAsRead(notificationId);
-        } catch {
-            // Keep optimistic UI behavior even if the backend call fails.
-        }
+        setNotifications(updatedNotifications);
+        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
     };
 
     const markAllAsRead = async () => {
-        const hasUnread = notifications.some(item => !item.isRead);
-        if (!hasUnread) {
-            return;
-        }
-
-        setNotifications(prev => prev.map(item => ({ ...item, isRead: true })));
-
-        try {
-            await notificationService.markAllNotificationsAsRead();
-        } catch {
-            // Keep optimistic UI behavior even if the backend call fails.
-        }
+        const updatedNotifications = notifications.map(item => ({ ...item, read: true }));
+        setNotifications(updatedNotifications);
+        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
     };
 
     const todayNotifications = useMemo(
-        () => notifications.filter(item => isToday(item.createdAt)),
+        () => notifications.filter(item => isToday(item.date)),
         [notifications]
     );
 
     const earlierNotifications = useMemo(
-        () => notifications.filter(item => !isToday(item.createdAt)),
+        () => notifications.filter(item => !isToday(item.date)),
         [notifications]
     );
 
@@ -210,9 +185,9 @@ export default function NotificationScreen({ navigation }: any) {
                             <Text style={styles.sectionTitle}>Today</Text>
                             {todayNotifications.map((item) => (
                                 <NotificationItem
-                                    key={item._id}
+                                    key={item.id}
                                     item={item}
-                                    onPress={() => markAsRead(item._id)}
+                                    onPress={() => markAsRead(item.id)}
                                 />
                             ))}
                         </View>
@@ -223,9 +198,9 @@ export default function NotificationScreen({ navigation }: any) {
                             <Text style={styles.sectionTitle}>Earlier</Text>
                             {earlierNotifications.map((item) => (
                                 <NotificationItem
-                                    key={item._id}
+                                    key={item.id}
                                     item={item}
-                                    onPress={() => markAsRead(item._id)}
+                                    onPress={() => markAsRead(item.id)}
                                 />
                             ))}
                         </View>
