@@ -15,6 +15,7 @@ const options = {
 servers: [
     {
         url: process.env.BASE_URL || 'http://localhost:5000',
+        // url: process.env.BASE_URL || 'https://banking-mobile-app.onrender.com',
         description: 'API server',
     },
 ],
