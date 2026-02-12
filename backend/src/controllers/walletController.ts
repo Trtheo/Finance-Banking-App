@@ -4,14 +4,15 @@ import * as transactionService from '../services/transactionService';
 
 export const deposit = async (req: Request, res: Response) => {
     try {
-        const { amount, description } = req.body;
+        const { amount, description, cardId } = req.body;
         const userId = (req as any).user.id;
+        const numericAmount = Number(amount);
 
-        if (!amount || amount <= 0) {
+        if (!numericAmount || numericAmount <= 0) {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        const transaction = await transactionService.createDeposit(userId, parseFloat(amount), description);
+        const transaction = await transactionService.createDeposit(userId, numericAmount, description, cardId);
         const wallet = await Wallet.findOne({ userId });
 
         res.json({
@@ -29,12 +30,13 @@ export const withdraw = async (req: Request, res: Response) => {
     try {
         const { amount, description } = req.body;
         const userId = (req as any).user.id;
+        const numericAmount = Number(amount);
 
-        if (!amount || amount <= 0) {
+        if (!numericAmount || numericAmount <= 0) {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        const transaction = await transactionService.createWithdrawal(userId, parseFloat(amount), description);
+        const transaction = await transactionService.createWithdrawal(userId, numericAmount, description);
         const wallet = await Wallet.findOne({ userId });
 
         res.json({

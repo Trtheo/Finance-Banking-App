@@ -7,6 +7,7 @@ interface CreateInAppNotificationInput {
     message: string;
     amount?: number;
     reference?: string;
+    cardLast4?: string;
 }
 
 export const createInAppNotification = async (input: CreateInAppNotificationInput) => {
@@ -17,6 +18,7 @@ export const createInAppNotification = async (input: CreateInAppNotificationInpu
         message: input.message,
         amount: input.amount,
         reference: input.reference,
+        cardLast4: input.cardLast4,
     });
 };
 

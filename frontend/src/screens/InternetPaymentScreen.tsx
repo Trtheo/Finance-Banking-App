@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     View,
     Text,
@@ -8,37 +8,58 @@ import {
     TextInput,
     Modal,
     FlatList,
-    KeyboardAvoidingView,
-    Platform
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { getPaymentServiceByKey, PaymentField } from '../constants/paymentServices';
 
-const PROVIDERS = [
-    { id: 'comcast', name: 'Comcast', icon: 'logo-github' }, // Placeholder icons
-    { id: 'spectrum', name: 'Spectrum', icon: 'logo-twitter' },
-    { id: 'at&t', name: 'AT&T', icon: 'logo-google' },
-    { id: 'verizon', name: 'Verizon', icon: 'logo-apple' },
-    { id: 'charter', name: 'Charter', icon: 'logo-venmo' },
-];
+const buildInitialFormValues = (fields: PaymentField[]) => (
+    fields.reduce((acc: Record<string, string>, field) => {
+        acc[field.key] = '';
+        return acc;
+    }, {})
+);
 
-const LATEST_PAYMENTS = [
-    { id: '1', name: 'Michael John', provider: 'Spectrum', accountId: '9236430' },
-    { id: '2', name: 'Abraham Lincoln', provider: 'Comcast', accountId: '10218332' },
-];
+export default function InternetPaymentScreen({ navigation, route }: any) {
+    const serviceKey = route?.params?.serviceKey;
+    const serviceConfig = useMemo(() => getPaymentServiceByKey(serviceKey), [serviceKey]);
 
-export default function InternetPaymentScreen({ navigation }: any) {
     const [selectedProvider, setSelectedProvider] = useState<any>(null);
-    const [customerId, setCustomerId] = useState('');
+    const [formValues, setFormValues] = useState<Record<string, string>>(buildInitialFormValues(serviceConfig.fields));
     const [isModalVisible, setIsModalVisible] = useState(false);
 
+    useEffect(() => {
+        setSelectedProvider(null);
+        setFormValues(buildInitialFormValues(serviceConfig.fields));
+    }, [serviceConfig]);
+
+    const updateField = (fieldKey: string, value: string) => {
+        setFormValues(prev => ({ ...prev, [fieldKey]: value }));
+    };
+
+    const hasMissingRequiredField = () => (
+        serviceConfig.fields.some((field) => !String(formValues[field.key] || '').trim())
+    );
+
     const handleContinue = () => {
-        if (selectedProvider && customerId) {
-            navigation.navigate('InternetPaymentSummary', {
-                provider: selectedProvider,
-                customerId: customerId,
-            });
+        if (!selectedProvider) {
+            Alert.alert('Select Provider', `Please select a ${serviceConfig.label.toLowerCase()} provider.`);
+            return;
         }
+
+        const missingField = serviceConfig.fields.find((field) => !String(formValues[field.key] || '').trim());
+        if (missingField) {
+            Alert.alert('Missing Information', `${missingField.label} is required.`);
+            return;
+        }
+
+        navigation.navigate('InternetPaymentSummary', {
+            serviceKey: serviceConfig.key,
+            serviceLabel: serviceConfig.label,
+            provider: selectedProvider,
+            formValues,
+        });
     };
 
     const renderProviderItem = ({ item }: any) => (
@@ -51,7 +72,7 @@ export default function InternetPaymentScreen({ navigation }: any) {
         >
             <View style={styles.providerLeft}>
                 <View style={styles.providerIconCircle}>
-                    <Ionicons name={item.icon} size={20} color="#666" />
+                    <Ionicons name={item.icon as any} size={20} color="#666" />
                 </View>
                 <Text style={styles.providerNameText}>{item.name}</Text>
             </View>
@@ -70,27 +91,15 @@ export default function InternetPaymentScreen({ navigation }: any) {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="chevron-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Internet</Text>
+                <Text style={styles.headerTitle}>{serviceConfig.label}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.iconContainer}>
                     <View style={styles.wifiCircle}>
-                        <Ionicons name="wifi" size={32} color="#FF5252" />
+                        <Ionicons name={serviceConfig.icon as any} size={32} color="#FF5252" />
                     </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Latest Payment</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                        {LATEST_PAYMENTS.map((payment) => (
-                            <TouchableOpacity key={payment.id} style={styles.latestPaymentCard}>
-                                <Text style={styles.latestName}>{payment.name}</Text>
-                                <Text style={styles.latestDetails}>{payment.provider} • {payment.accountId}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
                 </View>
 
                 <View style={styles.section}>
@@ -102,36 +111,40 @@ export default function InternetPaymentScreen({ navigation }: any) {
                         onPress={() => setIsModalVisible(true)}
                     >
                         <View style={styles.dropdownLeft}>
-                            <Ionicons name="wifi-outline" size={20} color="#CCC" style={{ marginRight: 10 }} />
+                            <Ionicons name={serviceConfig.icon as any} size={20} color="#CCC" style={{ marginRight: 10 }} />
                             <Text style={[styles.dropdownText, !selectedProvider && { color: '#CCC' }]}>
-                                {selectedProvider ? selectedProvider.name : 'Choose internet provider'}
+                                {selectedProvider ? selectedProvider.name : `Choose ${serviceConfig.label.toLowerCase()} provider`}
                             </Text>
                         </View>
                         <Ionicons name="chevron-down" size={20} color="#666" />
                     </TouchableOpacity>
 
-                    <Text style={[styles.label, { marginTop: 20 }]}>Customer ID</Text>
-                    <View style={styles.inputContainer}>
-                        <Ionicons name="person-outline" size={20} color="#CCC" style={{ marginRight: 10 }} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter the customer ID"
-                            placeholderTextColor="#CCC"
-                            value={customerId}
-                            onChangeText={setCustomerId}
-                            keyboardType="numeric"
-                        />
-                    </View>
+                    {serviceConfig.fields.map((field) => (
+                        <View key={field.key} style={styles.fieldBlock}>
+                            <Text style={styles.label}>{field.label}</Text>
+                            <View style={styles.inputContainer}>
+                                <Ionicons name={field.icon as any} size={20} color="#CCC" style={{ marginRight: 10 }} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder={field.placeholder}
+                                    placeholderTextColor="#CCC"
+                                    value={formValues[field.key] || ''}
+                                    onChangeText={(value) => updateField(field.key, value)}
+                                    keyboardType={field.keyboardType || 'default'}
+                                />
+                            </View>
+                        </View>
+                    ))}
                 </View>
             </ScrollView>
 
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={[styles.continueButton, (!selectedProvider || !customerId) && styles.continueButtonDisabled]}
+                    style={[styles.continueButton, (!selectedProvider || hasMissingRequiredField()) && styles.continueButtonDisabled]}
                     onPress={handleContinue}
-                    disabled={!selectedProvider || !customerId}
+                    disabled={!selectedProvider || hasMissingRequiredField()}
                 >
-                    <Text style={[styles.continueText, (!selectedProvider || !customerId) && styles.continueTextDisabled]}>
+                    <Text style={[styles.continueText, (!selectedProvider || hasMissingRequiredField()) && styles.continueTextDisabled]}>
                         Continue
                     </Text>
                 </TouchableOpacity>
@@ -153,7 +166,7 @@ export default function InternetPaymentScreen({ navigation }: any) {
                             </TouchableOpacity>
                         </View>
                         <FlatList
-                            data={PROVIDERS}
+                            data={serviceConfig.providers}
                             keyExtractor={(item) => item.id}
                             renderItem={renderProviderItem}
                             contentContainerStyle={styles.listContent}
@@ -199,17 +212,8 @@ const styles = StyleSheet.create({
     },
     section: { marginBottom: 30 },
     sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, color: '#333' },
-    horizontalScroll: { flexDirection: 'row' },
-    latestPaymentCard: {
-        backgroundColor: '#F8F9FA',
-        borderRadius: 12,
-        padding: 15,
-        marginRight: 15,
-        width: 160,
-    },
-    latestName: { fontSize: 14, fontWeight: '600', color: '#333' },
-    latestDetails: { fontSize: 12, color: '#999', marginTop: 4 },
     label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 },
+    fieldBlock: { marginTop: 20 },
     dropdown: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFF',
     },
     continueButton: {
-        backgroundColor: '#FFDB15', // Gold yellow from design
+        backgroundColor: '#FFDB15',
         borderRadius: 30,
         height: 55,
         justifyContent: 'center',
@@ -251,7 +255,6 @@ const styles = StyleSheet.create({
     continueButtonDisabled: { backgroundColor: '#F0F0F0' },
     continueText: { fontSize: 16, fontWeight: '700', color: '#000' },
     continueTextDisabled: { color: '#CCC' },
-    // Modal Styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContent: {
         backgroundColor: '#FFF',

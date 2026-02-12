@@ -1,15 +1,53 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from '@react-navigation/native';
+import * as transactionService from '../services/transactionService';
+import * as cardService from '../services/cardService';
 
 export default function DepositScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
+    const [selectedCardId, setSelectedCardId] = useState('');
+    const [cards, setCards] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingCards, setIsLoadingCards] = useState(true);
+
+    const loadCards = useCallback(async () => {
+        try {
+            setIsLoadingCards(true);
+            const apiCards = await cardService.getCards();
+            const cardsList = Array.isArray(apiCards) ? apiCards : [];
+            setCards(cardsList);
+
+            if (cardsList.length > 0) {
+                const defaultCard = cardsList.find((card: any) => card.isDefault) || cardsList[0];
+                setSelectedCardId(defaultCard?._id || '');
+            } else {
+                setSelectedCardId('');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to load cards');
+        } finally {
+            setIsLoadingCards(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadCards();
+        }, [loadCards])
+    );
+
+    const cardLabel = (card: any) => {
+        const suffix = String(card.cardNumber || '').slice(-4) || '0000';
+        const tier = (card.cardTier || 'PLATINUM').toUpperCase();
+        return `${tier} ••••${suffix}`;
+    };
 
     const handleDeposit = async () => {
         const numAmount = parseFloat(amount);
@@ -18,55 +56,24 @@ export default function DepositScreen({ navigation }: any) {
             return;
         }
 
+        if (cards.length === 0) {
+            Alert.alert('No Card', 'You need at least one card before making a deposit.');
+            return;
+        }
+
+        if (!selectedCardId) {
+            Alert.alert('Select Card', 'Please select a card to deposit to.');
+            return;
+        }
+
+        setIsLoading(true);
         try {
-            setIsLoading(true);
-            
-            // Get current balance
-            const storedBalance = await AsyncStorage.getItem('userBalance');
-            const currentBalance = storedBalance ? parseFloat(storedBalance) : 1000.00;
-            
-            // Add deposit to balance
-            const newBalance = currentBalance + numAmount;
-            await AsyncStorage.setItem('userBalance', newBalance.toString());
-            
-            // Create deposit transaction
-            const transaction = {
-                id: Date.now().toString(),
-                type: 'Deposit',
-                amount: numAmount,
-                description: description || 'Deposit',
-                date: new Date().toISOString(),
-                status: 'Completed'
-            };
-            
-            // Save transaction
-            const existingTransactions = await AsyncStorage.getItem('internetPayments');
-            const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-            transactions.unshift(transaction);
-            await AsyncStorage.setItem('internetPayments', JSON.stringify(transactions));
-            
-            // Create notification
-            const notification = {
-                id: Date.now().toString(),
-                title: 'Deposit Successful',
-                message: `$${numAmount.toFixed(2)} has been added to your account`,
-                date: new Date().toISOString(),
-                read: false,
-                type: 'deposit',
-                amount: numAmount
-            };
-            
-            // Save notification
-            const existingNotifications = await AsyncStorage.getItem('notifications');
-            const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
-            notifications.unshift(notification);
-            await AsyncStorage.setItem('notifications', JSON.stringify(notifications));
-            
-            Alert.alert('Success', `Deposit of $${numAmount.toFixed(2)} completed successfully! New balance: $${newBalance.toFixed(2)}`, [
-                { text: 'OK', onPress: () => navigation.navigate('Main') }
+            await transactionService.deposit(numAmount, description.trim() || undefined, selectedCardId);
+            Alert.alert('Success', `Successfully deposited RWF ${numAmount.toLocaleString()}`, [
+                { text: 'OK', onPress: () => navigation.navigate('Main') },
             ]);
         } catch (error: any) {
-            Alert.alert('Error', 'Deposit failed. Please try again.');
+            Alert.alert('Deposit Failed', error.response?.data?.message || error.message || 'Failed to process deposit');
         } finally {
             setIsLoading(false);
         }
@@ -85,7 +92,7 @@ export default function DepositScreen({ navigation }: any) {
             <View style={styles.content}>
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Add Funds to Your Account</Text>
-                    
+
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Amount</Text>
                         <TextInput
@@ -96,6 +103,38 @@ export default function DepositScreen({ navigation }: any) {
                             keyboardType="numeric"
                         />
                     </View>
+
+                    {isLoadingCards ? (
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Deposit To</Text>
+                            <ActivityIndicator size="small" color="#FFDE31" />
+                        </View>
+                    ) : cards.length > 1 ? (
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Deposit To Card</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={selectedCardId}
+                                    onValueChange={(itemValue) => setSelectedCardId(itemValue)}
+                                >
+                                    {cards.map((card: any) => (
+                                        <Picker.Item
+                                            key={card._id}
+                                            label={cardLabel(card)}
+                                            value={card._id}
+                                        />
+                                    ))}
+                                </Picker>
+                            </View>
+                        </View>
+                    ) : cards.length === 1 ? (
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Deposit To Card</Text>
+                            <View style={styles.readOnlyCardBox}>
+                                <Text style={styles.readOnlyCardText}>{cardLabel(cards[0])}</Text>
+                            </View>
+                        </View>
+                    ) : null}
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Description (Optional)</Text>
@@ -174,6 +213,24 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         fontSize: 16,
         backgroundColor: '#FFF',
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        backgroundColor: '#FFF',
+    },
+    readOnlyCardBox: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        paddingVertical: 14,
+        backgroundColor: '#F8F8F8',
+    },
+    readOnlyCardText: {
+        fontSize: 16,
+        color: '#333',
     },
     depositButton: {
         backgroundColor: '#FFDE31',

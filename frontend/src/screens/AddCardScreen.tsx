@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, TextInput, Alert, ActivityIndicator, Scro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './AddCardScreen.styles';
+import * as cardService from '../services/cardService';
 
 interface NavigationProps {
     navigate: (screen: string) => void;
@@ -17,7 +17,7 @@ interface AddCardScreenProps {
 
 export default function AddCardScreen({ navigation }: AddCardScreenProps) {
     const [cardType, setCardType] = useState('DEBIT');
-    const [cardTier, setCardTier] = useState('GOLD');
+    const [cardTier, setCardTier] = useState('PLATINUM');
     const [cardholderName, setCardholderName] = useState('');
     const [cardNumber, setCardNumber] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
@@ -27,7 +27,7 @@ export default function AddCardScreen({ navigation }: AddCardScreenProps) {
     const [showCardTiers, setShowCardTiers] = useState(false);
 
     const cardTypes = ['DEBIT', 'CREDIT', 'PREPAID'];
-    const cardTiers = ['GOLD', 'PLATINUM'];
+    const cardTiers = ['PLATINUM'];
 
     const generateCardNumber = useCallback(() => {
         const prefix = '4532';
@@ -64,25 +64,11 @@ export default function AddCardScreen({ navigation }: AddCardScreenProps) {
 
         setIsLoading(true);
         try {
-            const newCard = {
-                _id: Date.now().toString(),
-                cardType,
-                cardTier,
-                cardholderName,
-                cardNumber: cardNumber.replace(/\s/g, ''),
-                expiryDate,
-                cvv,
-                balance: 0,
-                isActive: true,
-                createdAt: new Date().toISOString()
-            };
-            
-            const existingCards = await AsyncStorage.getItem('userCards');
-            const cards = existingCards ? JSON.parse(existingCards) : [];
-            cards.push(newCard);
-            await AsyncStorage.setItem('userCards', JSON.stringify(cards));
-            
-            navigation.navigate('CardManagement');
+            await cardService.createCard(cardholderName);
+
+            Alert.alert('Success', 'Card added successfully', [
+                { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
         } catch (error) {
             console.error('Card creation error:', error);
             Alert.alert('Error', 'Failed to save card');

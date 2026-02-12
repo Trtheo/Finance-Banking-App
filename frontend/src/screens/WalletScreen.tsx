@@ -1,32 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as walletService from '../services/walletService';
+import * as cardService from '../services/cardService';
 
 export default function WalletScreen({ navigation }: any) {
     const [wallet, setWallet] = useState<any>(null);
+    const [cards, setCards] = useState<any[]>([]);
+    const [isBalanceVisible, setIsBalanceVisible] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchWallet = async () => {
-            try {
-                const data = await walletService.getWalletMe();
-                setWallet(data);
-            } catch (error: any) {
-                console.error('Error fetching wallet:', error.message);
-                Alert.alert('Error', 'Failed to fetch wallet data');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchWallet();
+    const fetchWalletAndCards = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const [walletData, apiCards] = await Promise.all([
+                walletService.getWalletMe(),
+                cardService.getCards(),
+            ]);
+
+            setWallet(walletData);
+            setCards(Array.isArray(apiCards) ? apiCards : []);
+        } catch (error: any) {
+            console.error('Error fetching cards data:', error.message);
+            Alert.alert('Error', 'Failed to fetch cards data');
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
+    useFocusEffect(
+        useCallback(() => {
+            fetchWalletAndCards();
+        }, [fetchWalletAndCards])
+    );
+
+    const formatCardNumber = (cardNumber: string) => {
+        const digitsOnly = String(cardNumber || '').replace(/\D/g, '');
+        if (!digitsOnly) return '0000 0000 0000 0000';
+        return digitsOnly.replace(/(.{4})/g, '$1 ').trim();
+    };
+
+    const getCardColors = (card: any): [string, string, ...string[]] => {
+        const tier = String(card?.cardTier || '').toUpperCase();
+        if (tier === 'GOLD') {
+            return ['#D4AF37', '#B8941F', '#8B7355'];
+        }
+        return ['#2C2C2C', '#1A1A1A'];
+    };
+
+    const formatExpiry = (dateValue: string) => {
+        if (!dateValue) return '--/--';
+        const parsed = new Date(dateValue);
+        if (Number.isNaN(parsed.getTime())) return dateValue;
+        return parsed.toLocaleDateString(undefined, { month: '2-digit', year: '2-digit' });
+    };
+
+    const formatVisibleBalance = (amount: number, currency = 'RWF') => {
+        if (!isBalanceVisible) return `${currency} ••••••`;
+        return `${currency} ${Number(amount || 0).toLocaleString()}`;
+    };
+
     const handleCardPress = (cardData: any) => {
+        const singleCardBalance =
+            cards.length === 1 ? Number(wallet?.balance || 0) : Number(cardData?.balance || 0);
+
         if (navigation && navigation.navigate) {
-            navigation.navigate('CardDetails', cardData);
+            navigation.navigate('CardDetails', {
+                card: { ...cardData, balance: singleCardBalance },
+                walletBalance: Number(wallet?.balance || 0),
+                cardsCount: cards.length,
+            });
         } else {
             Alert.alert('Navigation Error', 'Navigation object is not available');
         }
@@ -43,78 +89,66 @@ export default function WalletScreen({ navigation }: any) {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Cards</Text>
-                <TouchableOpacity>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
+                <View>
+                    <Text style={styles.headerTitle}>Cards</Text>
+                    <Text style={styles.totalText}>
+                        Total Balance: {formatVisibleBalance(Number(wallet?.balance || 0), wallet?.currency || 'RWF')}
+                    </Text>
+                </View>
+                <TouchableOpacity style={styles.iconBtn} onPress={() => setIsBalanceVisible(prev => !prev)}>
+                    <Ionicons name={isBalanceVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color="#000" />
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
-                    cardType: 'Platinum Card',
-                    cardNumber: wallet?.accountNumber || '•••• •••• •••• 3014',
-                    balance: `${wallet?.currency || 'RWF'} ${wallet?.balance?.toLocaleString() || '0'}`,
-                    cardholderName: 'Michael John',
-                    expiryDate: '03/29',
-                    colors: ['#2C2C2C', '#1A1A1A']
-                })}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardLabel}>Platinum Card</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#000" />
+                {cards.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="card-outline" size={56} color="#AAA" />
+                        <Text style={styles.emptyTitle}>No cards yet</Text>
+                        <Text style={styles.emptySubTitle}>Your default Platinum card will appear after account setup.</Text>
                     </View>
-                    <LinearGradient colors={['#2C2C2C', '#1A1A1A']} style={styles.card}>
-                        <View style={styles.cardTop}>
-                            <Text style={styles.cardBrand}>Nexpay</Text>
-                            <View style={styles.chipIcon} />
-                        </View>
-                        <Text style={styles.cardNumber}>{wallet?.accountNumber || '•••• •••• •••• 3014'}</Text>
-                        <Text style={styles.cardBalance}>
-                            {wallet?.currency || 'RWF'} {wallet?.balance?.toLocaleString() || '0'}
-                        </Text>
-                        <View style={styles.cardBottom}>
-                            <View>
-                                <Text style={styles.cardLabel2}>Card holder name</Text>
-                                <Text style={styles.cardInfo}>Michael John</Text>
-                            </View>
-                            <View>
-                                <Text style={styles.cardLabel2}>Expiry date</Text>
-                                <Text style={styles.cardInfo}>03/29</Text>
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
+                ) : (
+                    cards.map((card: any) => {
+                        const displayCardBalance =
+                            cards.length === 1 ? Number(wallet?.balance || 0) : Number(card.balance || 0);
 
-                <TouchableOpacity style={styles.cardSection} onPress={() => handleCardPress({
-                    cardType: 'Gold Card',
-                    cardNumber: '•••• •••• •••• 8762',
-                    balance: '$72,952.84',
-                    cardholderName: 'Michael John',
-                    expiryDate: '07/28',
-                    colors: ['#D4AF37', '#B8941F', '#8B7355']
-                })}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardLabel}>Gold Card</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#000" />
-                    </View>
-                    <LinearGradient colors={['#D4AF37', '#B8941F', '#8B7355']} style={styles.card}>
-                        <View style={styles.cardTop}>
-                            <Text style={styles.cardBrand}>Nexpay</Text>
-                            <Text style={styles.visaLogo}>VISA</Text>
-                        </View>
-                        <Text style={styles.cardNumber}>•••• •••• •••• 8762</Text>
-                        <Text style={styles.cardBalance}>$72,952.84</Text>
-                        <View style={styles.cardBottom}>
-                            <View>
-                                <Text style={styles.cardLabel2}>Card holder name</Text>
-                                <Text style={styles.cardInfo}>Michael John</Text>
-                            </View>
-                            <View>
-                                <Text style={styles.cardLabel2}>Expiry date</Text>
-                                <Text style={styles.cardInfo}>07/28</Text>
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
+                        return (
+                            <TouchableOpacity
+                                key={card._id}
+                                style={styles.cardSection}
+                                onPress={() => handleCardPress(card)}
+                            >
+                                <View style={styles.cardHeader}>
+                                    <Text style={styles.cardLabel}>
+                                        {(card.cardTier || 'PLATINUM').toUpperCase()} {(card.cardType || 'DEBIT').toUpperCase()} Card
+                                    </Text>
+                                    <Ionicons name="arrow-forward" size={20} color="#000" />
+                                </View>
+
+                                <LinearGradient colors={getCardColors(card)} style={styles.card}>
+                                    <View style={styles.cardTop}>
+                                        <Text style={styles.cardBrand}>Nexpay</Text>
+                                        <View style={styles.chipIcon} />
+                                    </View>
+                                    <Text style={styles.cardNumber}>{formatCardNumber(card.cardNumber)}</Text>
+                                    <Text style={styles.cardBalance}>
+                                        {formatVisibleBalance(displayCardBalance, wallet?.currency || 'RWF')}
+                                    </Text>
+                                    <View style={styles.cardBottom}>
+                                        <View>
+                                            <Text style={styles.cardLabel2}>Card holder name</Text>
+                                            <Text style={styles.cardInfo}>{card.cardHolderName || 'Nexpay User'}</Text>
+                                        </View>
+                                        <View>
+                                            <Text style={styles.cardLabel2}>Expiry date</Text>
+                                            <Text style={styles.cardInfo}>{formatExpiry(card.expiryDate)}</Text>
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        );
+                    })
+                )}
 
                 <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddCard')}>
                     <Ionicons name="add" size={20} color="#000" />
@@ -137,14 +171,46 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 15,
     },
+    iconBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: '#FFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: '#000',
     },
+    totalText: {
+        marginTop: 4,
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '500',
+    },
     content: {
         flex: 1,
         paddingHorizontal: 20,
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 48,
+    },
+    emptyTitle: {
+        marginTop: 12,
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#333',
+    },
+    emptySubTitle: {
+        marginTop: 8,
+        fontSize: 13,
+        color: '#777',
+        textAlign: 'center',
+        maxWidth: 260,
     },
     cardSection: {
         marginBottom: 20,
@@ -182,12 +248,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.3)',
         borderRadius: 6,
     },
-    visaLogo: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#FFF',
-        fontStyle: 'italic',
-    },
     cardNumber: {
         fontSize: 18,
         color: '#FFF',
@@ -195,7 +255,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     cardBalance: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#FFF',
         marginTop: 5,

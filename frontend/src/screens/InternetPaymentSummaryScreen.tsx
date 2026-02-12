@@ -1,72 +1,130 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from '@react-navigation/native';
+import * as transactionService from '../services/transactionService';
+import * as walletService from '../services/walletService';
+import * as cardService from '../services/cardService';
+import { getPaymentServiceByKey } from '../constants/paymentServices';
 
 export default function InternetPaymentSummaryScreen({ navigation, route }: any) {
-    const { provider, customerId } = route.params;
+    const {
+        provider,
+        serviceKey = 'internet',
+        serviceLabel = 'Internet',
+        formValues: routeFormValues,
+        customerId,
+    } = route.params || {};
+
+    const serviceConfig = useMemo(() => getPaymentServiceByKey(serviceKey), [serviceKey]);
+    const formValues = useMemo(() => {
+        if (routeFormValues && typeof routeFormValues === 'object') {
+            return routeFormValues as Record<string, string>;
+        }
+
+        if (customerId) {
+            return { customerId: String(customerId) };
+        }
+
+        return {};
+    }, [routeFormValues, customerId]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [billAmount, setBillAmount] = useState('75.00');
-    const adminFee = 1.00;
-    const totalAmount = parseFloat(billAmount) + adminFee;
+    const [billAmount, setBillAmount] = useState('75000');
+    const [cards, setCards] = useState<any[]>([]);
+    const [selectedCardId, setSelectedCardId] = useState('');
+    const [isLoadingCards, setIsLoadingCards] = useState(true);
+
+    const adminFee = 1000;
+
+    const totalAmount = useMemo(() => {
+        const parsedBillAmount = Number(billAmount);
+        if (!Number.isFinite(parsedBillAmount) || parsedBillAmount < 0) return adminFee;
+        return parsedBillAmount + adminFee;
+    }, [adminFee, billAmount]);
+
+    const loadCards = useCallback(async () => {
+        try {
+            setIsLoadingCards(true);
+            const apiCards = await cardService.getCards();
+            const cardsList = Array.isArray(apiCards) ? apiCards : [];
+            setCards(cardsList);
+
+            if (cardsList.length > 0) {
+                const defaultCard = cardsList.find((card: any) => card.isDefault) || cardsList[0];
+                setSelectedCardId(defaultCard?._id || '');
+            } else {
+                setSelectedCardId('');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to load cards');
+        } finally {
+            setIsLoadingCards(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadCards();
+        }, [loadCards])
+    );
+
+    const cardLabel = (card: any) => {
+        const suffix = String(card.cardNumber || '').slice(-4) || '0000';
+        const tier = (card.cardTier || 'PLATINUM').toUpperCase();
+        return `${tier} ••••${suffix}`;
+    };
+
+    const detailSummary = useMemo(() => {
+        return serviceConfig.fields
+            .map((field) => {
+                const value = formValues[field.key];
+                if (!value) return null;
+                return `${field.label}: ${value}`;
+            })
+            .filter(Boolean)
+            .join(', ');
+    }, [formValues, serviceConfig.fields]);
 
     const handlePayNow = async () => {
         try {
-            setIsProcessing(true);
-            
-            // Get current balance from AsyncStorage (local storage)
-            const storedBalance = await AsyncStorage.getItem('userBalance');
-            const currentBalance = storedBalance ? parseFloat(storedBalance) : 1000.00; // Default balance
-            
-            if (currentBalance < totalAmount) {
-                Alert.alert('Insufficient Balance', 'You do not have enough balance to complete this payment.');
+            const parsedBillAmount = Number(billAmount);
+            if (!Number.isFinite(parsedBillAmount) || parsedBillAmount <= 0) {
+                Alert.alert('Invalid Amount', 'Please enter a valid bill amount.');
                 return;
             }
-            
-            // Deduct payment from local balance
-            const newBalance = currentBalance - totalAmount;
-            await AsyncStorage.setItem('userBalance', newBalance.toString());
-            
-            // Store transaction in AsyncStorage
-            const transaction = {
-                id: Date.now().toString(),
-                type: 'Internet Payment',
-                provider: provider.name,
-                amount: totalAmount,
-                date: new Date().toISOString(),
-                status: 'Completed'
-            };
-            
-            const existingTransactions = await AsyncStorage.getItem('internetPayments');
-            const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-            transactions.unshift(transaction);
-            await AsyncStorage.setItem('internetPayments', JSON.stringify(transactions));
-            
-            // Create notification
-            const notification = {
-                id: (Date.now() + 1).toString(),
-                title: 'Payment Successful',
-                message: `$${totalAmount.toFixed(2)} paid to ${provider.name}`,
-                date: new Date().toISOString(),
-                read: false,
-                type: 'internet payment',
-                amount: totalAmount
-            };
-            
-            const existingNotifications = await AsyncStorage.getItem('notifications');
-            const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
-            notifications.unshift(notification);
-            await AsyncStorage.setItem('notifications', JSON.stringify(notifications));
-            
+
+            if (cards.length === 0) {
+                Alert.alert('No Card', 'You need at least one card before making a payment.');
+                return;
+            }
+
+            if (!selectedCardId) {
+                Alert.alert('Select Card', 'Please select the card to use for this payment.');
+                return;
+            }
+
+            setIsProcessing(true);
+
+            await transactionService.payBill(
+                totalAmount,
+                `${serviceLabel} payment to ${provider?.name || 'provider'}${detailSummary ? ` (${detailSummary})` : ''}`,
+                selectedCardId
+            );
+
+            const latestWallet = await walletService.getWalletMe().catch(() => null);
+            const balanceText = latestWallet
+                ? `${latestWallet?.currency || 'RWF'} ${Number(latestWallet?.balance || 0).toLocaleString()}`
+                : 'Updated';
+
             Alert.alert(
                 'Payment Successful',
-                `Your payment of $${totalAmount.toFixed(2)} to ${provider.name} has been processed successfully. New balance: $${newBalance.toFixed(2)}`,
+                `Your ${serviceLabel.toLowerCase()} payment of RWF ${totalAmount.toLocaleString()} to ${provider?.name || 'provider'} has been processed successfully. New balance: ${balanceText}`,
                 [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
             );
-            
         } catch (error: any) {
-            Alert.alert('Payment Failed', 'Unable to process payment. Please try again.');
+            Alert.alert('Payment Failed', error.response?.data?.message || 'Unable to process payment. Please try again.');
         } finally {
             setIsProcessing(false);
         }
@@ -78,7 +136,7 @@ export default function InternetPaymentSummaryScreen({ navigation, route }: any)
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="chevron-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Internet</Text>
+                <Text style={styles.headerTitle}>{serviceLabel}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -87,11 +145,14 @@ export default function InternetPaymentSummaryScreen({ navigation, route }: any)
                     <Text style={styles.sectionTitle}>Account</Text>
                     <View style={styles.accountCard}>
                         <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>JK</Text>
+                            <Text style={styles.avatarText}>{String(provider?.name || 'IP').slice(0, 2).toUpperCase()}</Text>
                         </View>
                         <View style={styles.accountInfo}>
-                            <Text style={styles.accountName}>John Kennedy</Text>
-                            <Text style={styles.accountDetails}>{provider.name} • {customerId}</Text>
+                            <Text style={styles.accountName}>{serviceLabel} Account</Text>
+                            <Text style={styles.accountDetails}>
+                                {provider?.name || 'Provider'}
+                                {detailSummary ? ` • ${detailSummary}` : ''}
+                            </Text>
                         </View>
                     </View>
                 </View>
@@ -111,19 +172,63 @@ export default function InternetPaymentSummaryScreen({ navigation, route }: any)
                             value={billAmount}
                             onChangeText={setBillAmount}
                             keyboardType="numeric"
-                            placeholder="0.00"
+                            placeholder="0"
                         />
                     </View>
                     <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>Admin fee</Text>
-                        <Text style={styles.summaryValue}>${adminFee.toFixed(2)}</Text>
+                        <Text style={styles.summaryValue}>RWF {adminFee.toLocaleString()}</Text>
                     </View>
+
+                    {serviceConfig.fields.map((field) => (
+                        <View key={field.key} style={styles.summaryItem}>
+                            <Text style={styles.summaryLabel}>{field.label}</Text>
+                            <Text style={styles.summaryValue}>{formValues[field.key] || '-'}</Text>
+                        </View>
+                    ))}
+
+                    {isLoadingCards ? (
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryLabel}>Pay from card</Text>
+                            <ActivityIndicator size="small" color="#FFDB15" />
+                        </View>
+                    ) : cards.length > 1 ? (
+                        <View style={styles.summaryItemColumn}>
+                            <Text style={styles.summaryLabel}>Pay from card</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={selectedCardId}
+                                    onValueChange={(itemValue) => setSelectedCardId(itemValue)}
+                                >
+                                    {cards.map((card: any) => (
+                                        <Picker.Item
+                                            key={card._id}
+                                            label={cardLabel(card)}
+                                            value={card._id}
+                                        />
+                                    ))}
+                                </Picker>
+                            </View>
+                        </View>
+                    ) : cards.length === 1 ? (
+                        <View style={styles.summaryItemColumn}>
+                            <Text style={styles.summaryLabel}>Pay from card</Text>
+                            <View style={styles.readOnlyCardBox}>
+                                <Text style={styles.readOnlyCardText}>{cardLabel(cards[0])}</Text>
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryLabel}>Pay from card</Text>
+                            <Text style={styles.summaryValue}>No card</Text>
+                        </View>
+                    )}
 
                     <View style={styles.divider} />
 
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>${totalAmount.toFixed(2)}</Text>
+                        <Text style={styles.totalValue}>RWF {totalAmount.toLocaleString()}</Text>
                     </View>
                 </View>
             </ScrollView>
@@ -132,7 +237,7 @@ export default function InternetPaymentSummaryScreen({ navigation, route }: any)
                 <TouchableOpacity
                     style={[styles.payNowButton, isProcessing && styles.disabledButton]}
                     onPress={handlePayNow}
-                    disabled={isProcessing}
+                    disabled={isProcessing || isLoadingCards}
                 >
                     <Text style={styles.payNowText}>
                         {isProcessing ? 'Processing...' : 'Pay Now'}
@@ -182,6 +287,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 15,
     },
+    summaryItemColumn: {
+        marginBottom: 15,
+    },
     summaryLabel: { fontSize: 14, color: '#999' },
     summaryValue: { fontSize: 14, fontWeight: '600', color: '#333' },
     unpaidBadge: {
@@ -226,5 +334,26 @@ const styles = StyleSheet.create({
         borderBottomColor: '#E0E0E0',
         paddingVertical: 4,
         minWidth: 80,
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        backgroundColor: '#FFF',
+        marginTop: 8,
+    },
+    readOnlyCardBox: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        paddingVertical: 14,
+        backgroundColor: '#F8F8F8',
+        marginTop: 8,
+    },
+    readOnlyCardText: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '600',
     },
 });

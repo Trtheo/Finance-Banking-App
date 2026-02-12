@@ -15,12 +15,14 @@ export default function CardsScreen() {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                
                 {/* Platinum Card */}
                 <TouchableOpacity style={styles.cardSection}>
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>Platinum Card</Text>
                         <Ionicons name="arrow-forward" size={20} color="#000" />
                     </View>
+
                     <LinearGradient
                         colors={['#2C2C2C', '#1A1A1A']}
                         style={styles.card}
@@ -29,8 +31,10 @@ export default function CardsScreen() {
                             <Text style={styles.cardBrand}>Nexpay</Text>
                             <View style={styles.chipIcon} />
                         </View>
+
                         <Text style={styles.cardNumber}>•••• •••• •••• 3014</Text>
                         <Text style={styles.cardBalance}>$317,286.00</Text>
+
                         <View style={styles.cardBottom}>
                             <View>
                                 <Text style={styles.cardLabel2}>Card holder name</Text>
@@ -44,40 +48,12 @@ export default function CardsScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
 
-                {/* Gold Card */}
-                <TouchableOpacity style={styles.cardSection}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardLabel}>Gold Card</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#000" />
-                    </View>
-                    <LinearGradient
-                        colors={['#D4AF37', '#B8941F', '#8B7355']}
-                        style={styles.card}
-                    >
-                        <View style={styles.cardTop}>
-                            <Text style={styles.cardBrand}>Nexpay</Text>
-                            <Text style={styles.visaLogo}>VISA</Text>
-                        </View>
-                        <Text style={styles.cardNumber}>•••• •••• •••• 8762</Text>
-                        <Text style={styles.cardBalance}>$72,952.84</Text>
-                        <View style={styles.cardBottom}>
-                            <View>
-                                <Text style={styles.cardLabel2}>Card holder name</Text>
-                                <Text style={styles.cardInfo}>Michael John</Text>
-                            </View>
-                            <View>
-                                <Text style={styles.cardLabel2}>Expiry date</Text>
-                                <Text style={styles.cardInfo}>07/28</Text>
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
-
                 {/* Add New Card Button */}
                 <TouchableOpacity style={styles.addButton}>
                     <Ionicons name="add" size={20} color="#000" />
                     <Text style={styles.addButtonText}>Add New Card</Text>
                 </TouchableOpacity>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -139,12 +115,6 @@ const styles = StyleSheet.create({
         height: 30,
         backgroundColor: 'rgba(255,255,255,0.3)',
         borderRadius: 6,
-    },
-    visaLogo: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#FFF',
-        fontStyle: 'italic',
     },
     cardNumber: {
         fontSize: 18,

@@ -6,12 +6,13 @@ import * as transactionService from '../services/transactionService';
  */
 export const deposit = async (req: any, res: Response) => {
     try {
-        const { amount, description } = req.body;
-        if (!amount || amount <= 0) {
+        const { amount, description, cardId } = req.body;
+        const numericAmount = Number(amount);
+        if (!numericAmount || numericAmount <= 0) {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        const transaction = await transactionService.createDeposit(req.user.id, amount, description);
+        const transaction = await transactionService.createDeposit(req.user.id, numericAmount, description, cardId);
         res.status(201).json(transaction);
     } catch (error: any) {
         res.status(400).json({ message: error.message });
@@ -23,12 +24,13 @@ export const deposit = async (req: any, res: Response) => {
  */
 export const withdraw = async (req: any, res: Response) => {
     try {
-        const { amount, description } = req.body;
-        if (!amount || amount <= 0) {
+        const { amount, description, cardId } = req.body;
+        const numericAmount = Number(amount);
+        if (!numericAmount || numericAmount <= 0) {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        const transaction = await transactionService.createWithdrawal(req.user.id, amount, description);
+        const transaction = await transactionService.createWithdrawal(req.user.id, numericAmount, description, cardId);
         res.status(201).json(transaction);
     } catch (error: any) {
         res.status(400).json({ message: error.message });
@@ -40,12 +42,19 @@ export const withdraw = async (req: any, res: Response) => {
  */
 export const transfer = async (req: any, res: Response) => {
     try {
-        const { receiverAccountNumber, amount, description } = req.body;
-        if (!receiverAccountNumber || !amount || amount <= 0) {
+        const { receiverAccountNumber, amount, description, cardId } = req.body;
+        const numericAmount = Number(amount);
+        if (!receiverAccountNumber || !numericAmount || numericAmount <= 0) {
             return res.status(400).json({ message: 'Receiver account number and valid amount are required' });
         }
 
-        const transaction = await transactionService.createTransfer(req.user.id, receiverAccountNumber, amount, description);
+        const transaction = await transactionService.createTransfer(
+            req.user.id,
+            receiverAccountNumber,
+            numericAmount,
+            description,
+            cardId
+        );
         res.status(201).json(transaction);
     } catch (error: any) {
         res.status(400).json({ message: error.message });

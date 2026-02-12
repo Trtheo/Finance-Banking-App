@@ -30,6 +30,9 @@ router.use(protect);
  *               description:
  *                 type: string
  *                 example: Weekend savings
+ *               cardId:
+ *                 type: string
+ *                 example: "65f2a12b3c4d5e6f7890abcd"
  *     responses:
  *       201:
  *         description: Deposit successful
@@ -61,6 +64,9 @@ router.post('/deposit', deposit);
  *               description:
  *                 type: string
  *                 example: ATM withdrawal
+ *               cardId:
+ *                 type: string
+ *                 example: "65f2a12b3c4d5e6f7890abcd"
  *     responses:
  *       201:
  *         description: Withdrawal successful
@@ -96,6 +102,9 @@ router.post('/withdraw', withdraw);
  *               description:
  *                 type: string
  *                 example: Lunch payment
+ *               cardId:
+ *                 type: string
+ *                 example: "65f2a12b3c4d5e6f7890abcd"
  *     responses:
  *       201:
  *         description: Transfer successful

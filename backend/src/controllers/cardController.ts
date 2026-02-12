@@ -1,39 +1,67 @@
-// backend/src/controllers/cardController.ts
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import Card from '../models/cardModel';
 import Wallet from '../models/Wallet';
 
-// Utility functions
 const generateCardNumber = () =>
     Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
 
 const generateCVV = () =>
     Math.floor(100 + Math.random() * 900).toString();
 
+const generateUniqueCardNumber = async () => {
+    let cardNumber = generateCardNumber();
+    while (await Card.exists({ cardNumber })) {
+        cardNumber = generateCardNumber();
+    }
+    return cardNumber;
+};
+
+const getWalletByUserId = async (userId: string) => {
+    return await Wallet.findOne({ userId });
+};
+
+const getOwnedCard = async (userId: string, cardId: string) => {
+    const wallet = await getWalletByUserId(userId);
+    if (!wallet) return null;
+    return await Card.findOne({ _id: cardId, walletId: wallet._id });
+};
+
+const toPublicCard = (card: any) => {
+    const cardObj = card.toObject();
+    delete cardObj.cvv;
+    return cardObj;
+};
+
 // Create a new card
 export const createCard = async (req: any, res: Response) => {
     try {
-        const userId = req.user.id; // from auth middleware
+        const userId = req.user.id;
         const { cardHolderName } = req.body;
 
-        // Find wallet
-        const wallet = await Wallet.findOne({ userId });
+        if (!cardHolderName || String(cardHolderName).trim().length < 2) {
+            return res.status(400).json({ message: 'Valid cardHolderName is required' });
+        }
+
+        const wallet = await getWalletByUserId(userId);
         if (!wallet) return res.status(404).json({ message: 'Wallet not found' });
 
         const card = new Card({
-            cardNumber: generateCardNumber(),
+            cardNumber: await generateUniqueCardNumber(),
             cvv: generateCVV(),
             expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
-            cardHolderName,
+            cardHolderName: String(cardHolderName).trim(),
             walletId: wallet._id,
+            cardType: 'debit',
+            cardTier: 'PLATINUM',
+            balance: 0,
+            isDefault: false,
         });
 
         await card.save();
 
-        const maskedNumber = '**** **** **** ' + card.cardNumber.slice(-4);
         res.status(201).json({
             message: 'Card created',
-            card: { ...card.toObject(), cardNumber: maskedNumber, cvv: undefined },
+            card: toPublicCard(card),
         });
     } catch (error) {
         console.error(error);
@@ -45,17 +73,24 @@ export const createCard = async (req: any, res: Response) => {
 export const getCardsByAccount = async (req: any, res: Response) => {
     try {
         const userId = req.user.id;
-        const wallet = await Wallet.findOne({ userId });
+        const wallet = await getWalletByUserId(userId);
         if (!wallet) return res.status(404).json({ message: 'Wallet not found' });
 
-        const cards = await Card.find({ walletId: wallet._id });
-        const maskedCards = cards.map(card => ({
-            ...card.toObject(),
-            cardNumber: '**** **** **** ' + card.cardNumber.slice(-4),
-            cvv: undefined,
-        }));
+        const cards = await Card.find({ walletId: wallet._id }).sort({ isDefault: -1, createdAt: 1 });
 
-        res.json(maskedCards);
+        // Backward compatibility: if this account has only one card, keep it aligned with wallet total.
+        if (cards.length === 1) {
+            const singleCard = cards[0];
+            const walletBalance = Number(wallet.balance || 0);
+            const cardBalance = Number(singleCard.balance || 0);
+
+            if (Math.abs(walletBalance - cardBalance) > 0.0001) {
+                singleCard.balance = walletBalance;
+                await singleCard.save();
+            }
+        }
+
+        res.json(cards.map(toPublicCard));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -66,7 +101,7 @@ export const getCardsByAccount = async (req: any, res: Response) => {
 export const freezeCard = async (req: any, res: Response) => {
     try {
         const { cardId } = req.params;
-        const card = await Card.findById(cardId);
+        const card = await getOwnedCard(req.user.id, cardId);
         if (!card) return res.status(404).json({ message: 'Card not found' });
 
         card.status = 'blocked';
@@ -82,7 +117,7 @@ export const freezeCard = async (req: any, res: Response) => {
 export const unfreezeCard = async (req: any, res: Response) => {
     try {
         const { cardId } = req.params;
-        const card = await Card.findById(cardId);
+        const card = await getOwnedCard(req.user.id, cardId);
         if (!card) return res.status(404).json({ message: 'Card not found' });
 
         card.status = 'active';
@@ -98,10 +133,31 @@ export const unfreezeCard = async (req: any, res: Response) => {
 export const deleteCard = async (req: any, res: Response) => {
     try {
         const { cardId } = req.params;
-        const card = await Card.findById(cardId);
+        const card = await getOwnedCard(req.user.id, cardId);
         if (!card) return res.status(404).json({ message: 'Card not found' });
 
+        const cardsCount = await Card.countDocuments({ walletId: card.walletId });
+        if (cardsCount <= 1) {
+            return res.status(400).json({ message: 'Cannot delete your last card' });
+        }
+
+        if (Number(card.balance || 0) > 0) {
+            return res.status(400).json({ message: 'Cannot delete a card with balance. Transfer or withdraw first.' });
+        }
+
+        const wasDefault = Boolean(card.isDefault);
+        const walletId = card.walletId;
+
         await card.deleteOne();
+
+        if (wasDefault) {
+            const nextDefault = await Card.findOne({ walletId }).sort({ createdAt: 1 });
+            if (nextDefault) {
+                nextDefault.isDefault = true;
+                await nextDefault.save();
+            }
+        }
+
         res.json({ message: 'Card deleted successfully' });
     } catch (error) {
         console.error(error);

@@ -1,28 +1,106 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Modal } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    Alert,
+    ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as cardService from '../services/cardService';
+
+const WITHDRAW_LIMIT_PER_CARD = 5_000_000;
 
 export default function CardDetailsScreen({ navigation, route }: any) {
-    const { card } = route.params;
-    const [cardStatus, setCardStatus] = useState(card?.isActive ?? true);
-    const [foreignTransactions, setForeignTransactions] = useState(false);
-    const [onlineTransactions, setOnlineTransactions] = useState(true);
-    const [activeTab, setActiveTab] = useState('detail');
-    const [modalVisible, setModalVisible] = useState(false);
+    const { card, walletBalance = 0, cardsCount = 0 } = route.params || {};
+    const [cardStatus, setCardStatus] = useState(card?.status !== 'blocked');
+    const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+    const [isActionLoading, setIsActionLoading] = useState(false);
 
-    const getCardColors = (cardType: string) => {
-        switch (cardType?.toUpperCase()) {
+    const effectiveBalance = useMemo(() => {
+        return Number(cardsCount) === 1 ? Number(walletBalance || 0) : Number(card?.balance || 0);
+    }, [cardsCount, walletBalance, card?.balance]);
+
+    const getCardColors = (cardType: string): [string, string, ...string[]] => {
+        switch (String(cardType || '').toUpperCase()) {
             case 'CREDIT':
                 return ['#D4AF37', '#B8941F', '#8B7355'];
-            case 'DEBIT':
-                return ['#2C2C2C', '#1A1A1A'];
             case 'PREPAID':
                 return ['#4A90E2', '#357ABD'];
             default:
                 return ['#2C2C2C', '#1A1A1A'];
         }
+    };
+
+    const displayCardNumber = useMemo(() => {
+        const digitsOnly = String(card?.cardNumber || '').replace(/\D/g, '');
+        if (!digitsOnly) return '0000 0000 0000 0000';
+        return digitsOnly.replace(/(.{4})/g, '$1 ').trim();
+    }, [card?.cardNumber]);
+
+    const displayExpiry = useMemo(() => {
+        if (!card?.expiryDate) return '--/--';
+        const parsed = new Date(card.expiryDate);
+        if (Number.isNaN(parsed.getTime())) return String(card.expiryDate);
+        return parsed.toLocaleDateString(undefined, { month: '2-digit', year: '2-digit' });
+    }, [card?.expiryDate]);
+
+    const cardholderName = card?.cardholderName || card?.cardHolderName || 'Nexpay User';
+
+    const handleToggleFreeze = async () => {
+        if (!card?._id) {
+            Alert.alert('Unavailable', 'This card cannot be updated right now.');
+            return;
+        }
+
+        try {
+            setIsActionLoading(true);
+            if (cardStatus) {
+                await cardService.freezeCard(card._id);
+                setCardStatus(false);
+                Alert.alert('Card Frozen', 'Your card has been frozen successfully.');
+            } else {
+                await cardService.unfreezeCard(card._id);
+                setCardStatus(true);
+                Alert.alert('Card Unfrozen', 'Your card is now active.');
+            }
+        } catch (error: any) {
+            Alert.alert('Action Failed', error.response?.data?.message || 'Failed to update card status.');
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleDeleteCard = () => {
+        if (!card?._id) {
+            Alert.alert('Unavailable', 'This card cannot be deleted right now.');
+            return;
+        }
+
+        Alert.alert('Delete Card', 'Are you sure you want to delete this card?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        setIsActionLoading(true);
+                        await cardService.deleteCard(card._id);
+                        Alert.alert('Card Deleted', 'Card deleted successfully.', [
+                            { text: 'OK', onPress: () => navigation.goBack() },
+                        ]);
+                    } catch (error: any) {
+                        Alert.alert('Delete Failed', error.response?.data?.message || 'Failed to delete card.');
+                    } finally {
+                        setIsActionLoading(false);
+                    }
+                },
+            },
+        ]);
     };
 
     return (
@@ -31,186 +109,98 @@ export default function CardDetailsScreen({ navigation, route }: any) {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="chevron-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{card?.cardTier || 'GOLD'} {card?.cardType || 'Card'}</Text>
-                <TouchableOpacity>
-                    <Ionicons name="settings-outline" size={24} color="#000" />
+                <Text style={styles.headerTitle}>Card Details</Text>
+                <TouchableOpacity onPress={() => setIsBalanceVisible(prev => !prev)}>
+                    <Ionicons name={isBalanceVisible ? 'eye-off-outline' : 'eye-outline'} size={22} color="#000" />
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                <View style={styles.tabContainer}>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'detail' && styles.activeTab]}
-                        onPress={() => setActiveTab('detail')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'detail' && styles.activeTabText]}>
-                            Detail Card
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'transactions' && styles.activeTab]}
-                        onPress={() => setActiveTab('transactions')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'transactions' && styles.activeTabText]}>
-                            Transactions
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
                 <LinearGradient colors={getCardColors(card?.cardType)} style={styles.card}>
                     <View style={styles.cardTop}>
                         <Text style={styles.cardBrand}>Nexpay</Text>
                         <View style={styles.chipIcon} />
                     </View>
-                    <Text style={styles.cardNumber}>
-                        •••• •••• •••• {card?.cardNumber?.slice(-4) || '0000'}
+
+                    <Text style={styles.cardNumber}>{displayCardNumber}</Text>
+
+                    <Text style={styles.cardBalance}>
+                        {isBalanceVisible ? `RWF ${effectiveBalance.toLocaleString()}` : 'RWF ••••••'}
                     </Text>
-                    <Text style={styles.cardBalance}>${card?.balance?.toLocaleString() || '0.00'}</Text>
+
                     <View style={styles.cardBottom}>
                         <View>
                             <Text style={styles.cardLabel}>Card holder name</Text>
-                            <Text style={styles.cardInfo}>{card?.cardholderName || 'Name'}</Text>
+                            <Text style={styles.cardInfo}>{cardholderName}</Text>
                         </View>
                         <View>
                             <Text style={styles.cardLabel}>Expiry date</Text>
-                            <Text style={styles.cardInfo}>{card?.expiryDate || 'MM/YY'}</Text>
+                            <Text style={styles.cardInfo}>{displayExpiry}</Text>
                         </View>
                     </View>
                 </LinearGradient>
 
-                <View style={styles.limitSection}>
-                    <View style={styles.limitHeader}>
-                        <Text style={styles.sectionTitle}>Limit Settings</Text>
-                        <TouchableOpacity style={styles.editButton} onPress={() => setModalVisible(true)}>
-                            <Ionicons name="create-outline" size={16} color="#FFF" />
-                            <Text style={styles.editButtonText}>Edit</Text>
-                        </TouchableOpacity>
+                <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>Card Information</Text>
+
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Card Number</Text>
+                        <Text style={styles.infoValue}>{displayCardNumber}</Text>
                     </View>
-                    <View style={styles.limitRow}>
-                        <View style={styles.limitItem}>
-                            <Text style={styles.limitLabel}>Transaction Limit</Text>
-                            <Text style={styles.limitValue}>$5,000.00</Text>
-                        </View>
-                        <View style={styles.limitItem}>
-                            <Text style={styles.limitLabel}>Withdraw Limit</Text>
-                            <Text style={styles.limitValue}>$2,500.00</Text>
-                        </View>
+
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Expiry Date</Text>
+                        <Text style={styles.infoValue}>{displayExpiry}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Card Holder</Text>
+                        <Text style={styles.infoValue}>{cardholderName}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Card Status</Text>
+                        <Text style={[styles.infoValue, cardStatus ? styles.statusActive : styles.statusFrozen]}>
+                            {cardStatus ? 'ACTIVE' : 'FROZEN'}
+                        </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Withdraw Limit</Text>
+                        <Text style={styles.infoValue}>RWF {WITHDRAW_LIMIT_PER_CARD.toLocaleString()}</Text>
                     </View>
                 </View>
 
-                <View style={styles.settingsSection}>
-                    <View style={styles.settingRow}>
-                        <Text style={styles.settingLabel}>Card Status</Text>
-                        <View style={styles.settingRight}>
-                            <Text style={[styles.statusText, cardStatus && styles.activeStatus]}>
-                                {cardStatus ? 'Active' : 'Inactive'}
-                            </Text>
-                            <Switch
-                                value={cardStatus}
-                                onValueChange={setCardStatus}
-                                trackColor={{ false: '#E0E0E0', true: '#FFD700' }}
-                                thumbColor="#FFF"
-                            />
-                        </View>
-                    </View>
+                <View style={styles.actionsSection}>
+                    <TouchableOpacity
+                        style={[
+                            styles.actionButton,
+                            cardStatus ? styles.freezeButton : styles.unfreezeButton,
+                            isActionLoading && styles.disabled,
+                        ]}
+                        onPress={handleToggleFreeze}
+                        disabled={isActionLoading}
+                    >
+                        {isActionLoading ? (
+                            <ActivityIndicator color="#FFF" />
+                        ) : (
+                            <>
+                                <Ionicons name={cardStatus ? 'pause' : 'play'} size={18} color="#FFF" />
+                                <Text style={styles.actionText}>{cardStatus ? 'Freeze Card' : 'Unfreeze Card'}</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
 
-                    <View style={styles.settingRow}>
-                        <Text style={styles.settingLabel}>Foreign Transactions</Text>
-                        <View style={styles.settingRight}>
-                            <Text style={[styles.statusText, !foreignTransactions && styles.inactiveStatus]}>
-                                {foreignTransactions ? 'Active' : 'Inactive'}
-                            </Text>
-                            <Switch
-                                value={foreignTransactions}
-                                onValueChange={setForeignTransactions}
-                                trackColor={{ false: '#E0E0E0', true: '#FFD700' }}
-                                thumbColor="#FFF"
-                            />
-                        </View>
-                    </View>
-
-                    <View style={styles.settingRow}>
-                        <Text style={styles.settingLabel}>Online Transactions</Text>
-                        <View style={styles.settingRight}>
-                            <Text style={[styles.statusText, onlineTransactions && styles.activeStatus]}>
-                                {onlineTransactions ? 'Active' : 'Inactive'}
-                            </Text>
-                            <Switch
-                                value={onlineTransactions}
-                                onValueChange={setOnlineTransactions}
-                                trackColor={{ false: '#E0E0E0', true: '#FFD700' }}
-                                thumbColor="#FFF"
-                            />
-                        </View>
-                    </View>
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.deleteButton, isActionLoading && styles.disabled]}
+                        onPress={handleDeleteCard}
+                        disabled={isActionLoading}
+                    >
+                        <Ionicons name="trash-outline" size={18} color="#FFF" />
+                        <Text style={styles.actionText}>Delete Card</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
-
-            <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Card Settings</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Ionicons name="close" size={24} color="#000" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.modalContent}>
-                            <Text style={styles.sectionLabel}>Card Info</Text>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>Card Type</Text>
-                                <Text style={styles.infoValue}>{card?.cardTier || 'GOLD'}</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>Account Holder</Text>
-                                <Text style={styles.infoValue}>{card?.cardholderName || 'Name'}</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>Account Number</Text>
-                                <Text style={styles.infoValue}>{card?.cardNumber || '0000 0000 0000 0000'}</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>Expiry Date</Text>
-                                <Text style={styles.infoValue}>{card?.expiryDate || 'MM/YY'}</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>CVV</Text>
-                                <Text style={styles.infoValue}>{card?.cvv || '***'}</Text>
-                            </View>
-
-                            <TouchableOpacity style={styles.actionRow}>
-                                <View style={styles.actionLeft}>
-                                    <Ionicons name="key-outline" size={20} color="#666" />
-                                    <Text style={styles.actionText}>Change PIN Number</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#999" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.actionRow}>
-                                <View style={styles.actionLeft}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#666" />
-                                    <Text style={styles.actionText}>Lock Card Temporarily</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#999" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.actionRow}>
-                                <View style={styles.actionLeft}>
-                                    <Ionicons name="close-circle-outline" size={20} color="#666" />
-                                    <Text style={styles.actionText}>Block Card Permanently</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#999" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }
@@ -229,41 +219,17 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#000',
     },
     content: {
         flex: 1,
         paddingHorizontal: 20,
     },
-    tabContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#FFF',
-        borderRadius: 25,
-        padding: 4,
-        marginBottom: 20,
-    },
-    tab: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-        borderRadius: 22,
-    },
-    activeTab: {
-        backgroundColor: '#FFD700',
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#666',
-    },
-    activeTabText: {
-        color: '#000',
-    },
     card: {
-        borderRadius: 16,
-        padding: 20,
-        height: 200,
+        borderRadius: 18,
+        padding: 22,
+        minHeight: 210,
         justifyContent: 'space-between',
         marginBottom: 20,
     },
@@ -273,8 +239,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardBrand: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: '700',
         color: '#FFF',
     },
     chipIcon: {
@@ -291,175 +257,89 @@ const styles = StyleSheet.create({
     },
     cardBalance: {
         fontSize: 28,
-        fontWeight: 'bold',
+        fontWeight: '800',
         color: '#FFF',
-        marginTop: 5,
+        marginTop: 6,
     },
     cardBottom: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 10,
+        marginTop: 12,
     },
     cardLabel: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.7)',
+        color: 'rgba(255,255,255,0.75)',
         marginBottom: 4,
     },
     cardInfo: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#FFF',
     },
-    limitSection: {
+    infoSection: {
         backgroundColor: '#FFF',
         borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-    },
-    limitHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 15,
+        padding: 18,
+        marginBottom: 18,
     },
     sectionTitle: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#000',
-    },
-    editButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#000',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        gap: 4,
-    },
-    editButtonText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#FFF',
-    },
-    limitRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    limitItem: {
-        flex: 1,
-    },
-    limitLabel: {
-        fontSize: 12,
-        color: '#999',
-        marginBottom: 8,
-    },
-    limitValue: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#000',
-    },
-    settingsSection: {
-        backgroundColor: '#FFF',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 30,
-    },
-    settingRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    settingLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#000',
-    },
-    settingRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    statusText: {
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    activeStatus: {
-        color: '#4CAF50',
-    },
-    inactiveStatus: {
-        color: '#F44336',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContainer: {
-        backgroundColor: '#FFF',
-        borderTopLeftRadius: 25,
-        borderTopRightRadius: 25,
-        paddingBottom: 30,
-        maxHeight: '80%',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#000',
-    },
-    modalContent: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
-    sectionLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#000',
-        marginBottom: 15,
+        fontWeight: '700',
+        color: '#111',
+        marginBottom: 14,
     },
     infoRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F2',
     },
     infoLabel: {
         fontSize: 14,
-        color: '#999',
+        color: '#666',
     },
     infoValue: {
         fontSize: 14,
-        fontWeight: '500',
-        color: '#000',
+        color: '#111',
+        fontWeight: '600',
+        maxWidth: '60%',
+        textAlign: 'right',
     },
-    actionRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        marginTop: 10,
+    statusActive: {
+        color: '#2E7D32',
     },
-    actionLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    statusFrozen: {
+        color: '#C62828',
+    },
+    actionsSection: {
         gap: 12,
+        marginBottom: 30,
+    },
+    actionButton: {
+        height: 52,
+        borderRadius: 12,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+    },
+    freezeButton: {
+        backgroundColor: '#EF6C00',
+    },
+    unfreezeButton: {
+        backgroundColor: '#2E7D32',
+    },
+    deleteButton: {
+        backgroundColor: '#C62828',
     },
     actionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#000',
+        fontSize: 15,
+        color: '#FFF',
+        fontWeight: '700',
+    },
+    disabled: {
+        opacity: 0.6,
     },
 });
