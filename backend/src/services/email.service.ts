@@ -1,5 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
+// import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 // Log email configuration on startup (for debugging)
 console.log('=== Email Service Configuration ===');
@@ -10,24 +10,41 @@ console.log('Email Password:', process.env.EMAIL_PASS ? '***' : 'NOT SET');
 console.log('===================================\n');
 
 // Create transporter with explicit SMTPTransport options
-const transporter: Transporter<SMTPTransport.SentMessageInfo> = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,                    // SMTP host
-  port: Number(process.env.EMAIL_PORT) || 465,     // Gmail SSL port (465)
-  secure: true,  // true for SSL (port 465)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+// const transporter: Transporter<SMTPTransport.SentMessageInfo> = nodemailer.createTransport({
+//   host: process.env.EMAIL_HOST,                    // SMTP host
+//   port: Number(process.env.EMAIL_PORT) || 465,     // Gmail SSL port (465)
+//   secure: true,  // true for SSL (port 465)
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+//   tls: {
+//     rejectUnauthorized: false, // Allow self-signed certificates
+//     minVersion: 'TLSv1.2', // Use modern TLS
+//   },
+//   family: 4, // force IPv4 (avoids ENETUNREACH on Render)
+//   connectionTimeout: 15000,
+//   socketTimeout: 15000,
+//   debug: true, // Enable debug logs
+//   logger: true, // Log SMTP traffic
+// } as SMTPTransport.Options); // Cast object to SMTPTransport.Options
+
+
+const transporter = nodemailer.createTransport({
+  service:'gmail',
+  host:'smtp.gmail.com',
+  tls:{
+    ciphers:"SSLv3",
   },
-  tls: {
-    rejectUnauthorized: false, // Allow self-signed certificates
-    minVersion: 'TLSv1.2', // Use modern TLS
-  },
-  family: 4, // force IPv4 (avoids ENETUNREACH on Render)
-  connectionTimeout: 15000,
-  socketTimeout: 15000,
-  debug: true, // Enable debug logs
-  logger: true, // Log SMTP traffic
-} as SMTPTransport.Options); // Cast object to SMTPTransport.Options
+  port:587,
+  secure:false,
+  auth:{
+     user: process.env.EMAIL_USER,
+     pass: process.env.EMAIL_PASS,
+  }
+})
+
+
 
 // Verify transporter connection
 transporter.verify((error: Error | null, success: boolean) => {
