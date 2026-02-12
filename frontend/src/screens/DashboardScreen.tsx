@@ -1,14 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Dimensions, RefreshControl, ActivityIndicator, Alert
+    RefreshControl, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as walletService from '../services/walletService';
+import * as transactionService from '../services/transactionService';
+import * as authService from '../services/authService';
+import * as notificationService from '../services/notificationService';
 
-const { width } = Dimensions.get('window');
+const maskAccountNumber = (accountNumber?: string) => {
+    const clean = String(accountNumber || '').replace(/\s/g, '');
+    if (!clean) return '**** **** ****';
+    if (clean.length <= 4) return clean;
+    return `**** **** ${clean.slice(-4)}`;
+};
+
+const normalizeId = (value: any) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    return String(value?._id || value);
+};
+
+const getTransactionDirection = (tx: any, currentUserId: string) => {
+    const txType = String(tx?.type || '').toUpperCase();
+    if (txType === 'DEPOSIT') return 'income';
+    if (txType === 'TRANSFER') {
+        const receiverId = normalizeId(tx?.receiverId);
+        if (currentUserId && receiverId === currentUserId) return 'income';
+    }
+    return 'expense';
+};
 
 const ActionButton = ({ icon, label, color, onPress }: any) => (
     <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
@@ -29,7 +54,7 @@ const TransactionItem = ({ name, type, amount, date, icon, color }: any) => (
             <Text style={styles.transDate}>{date}</Text>
         </View>
         <Text style={[styles.transAmount, { color: type === 'income' ? '#4CAF50' : '#FF5252' }]}>
-            {type === 'income' ? '+' : '-'}${Math.abs(amount).toLocaleString()}
+            {type === 'income' ? '+' : '-'}RWF {Math.abs(amount).toLocaleString()}
         </Text>
     </View>
 );
@@ -41,25 +66,48 @@ export default function DashboardScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isMainBalanceVisible, setIsMainBalanceVisible] = useState(true);
 
     const fetchData = async () => {
         try {
-            // Get balance from local storage
-            const storedBalance = await AsyncStorage.getItem('userBalance');
-            const balance = storedBalance ? parseFloat(storedBalance) : 1000.00;
+            const [walletResult, historyResult, userResult, unreadResult] = await Promise.allSettled([
+                walletService.getWalletMe(),
+                transactionService.getHistory(),
+                authService.getMe(),
+                notificationService.getUnreadCount(),
+            ]);
+
+            if (walletResult.status !== 'fulfilled') {
+                throw walletResult.reason;
+            }
             
-            // Get transactions from local storage
-            const storedTransactions = await AsyncStorage.getItem('internetPayments');
-            const transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+            const unreadCount = unreadResult.status === 'fulfilled' ? Number(unreadResult.value || 0) : 0;
+
+            let profile: any = { fullName: 'Nexpay User' };
+            if (userResult.status === 'fulfilled' && userResult.value) {
+                profile = userResult.value;
+            } else {
+                const storedUserData = await AsyncStorage.getItem('userData');
+                if (storedUserData) {
+                    try {
+                        const parsedUser = JSON.parse(storedUserData);
+                        const fallbackName = parsedUser?.fullName || parsedUser?.user?.fullName || parsedUser?.name;
+                        if (fallbackName) {
+                            profile = { ...parsedUser, fullName: fallbackName };
+                        }
+                    } catch {
+                        console.error('Failed to parse stored user data');
+                    }
+                }
+            }
             
-            // Get unread notifications count
-            const storedNotifications = await AsyncStorage.getItem('notifications');
-            const notifications = storedNotifications ? JSON.parse(storedNotifications) : [];
-            const unreadCount = notifications.filter((n: any) => !n.read).length;
-            
-            setWallet({ balance, currency: 'USD', accountNumber: '**** **** 1234' });
-            setTransactions(transactions.slice(0, 5));
-            setUser({ fullName: 'Nexpay User' });
+            setWallet(walletResult.value);
+            setTransactions(
+                historyResult.status === 'fulfilled' && Array.isArray(historyResult.value)
+                    ? historyResult.value.slice(0, 5)
+                    : []
+            );
+            setUser(profile);
             setUnreadCount(unreadCount);
         } catch (error: any) {
             console.error('Error fetching dashboard data:', error.message);
@@ -68,10 +116,6 @@ export default function DashboardScreen({ navigation }: any) {
             setIsRefreshing(false);
         }
     };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -120,13 +164,24 @@ export default function DashboardScreen({ navigation }: any) {
                     <View style={styles.mainCard}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                             <Text style={styles.cardLabel}>Main Balance</Text>
-                            <MaterialCommunityIcons name="dots-horizontal" size={24} color="black" />
+                            <TouchableOpacity
+                                style={styles.balanceToggleBtn}
+                                onPress={() => setIsMainBalanceVisible(prev => !prev)}
+                            >
+                                <Ionicons
+                                    name={isMainBalanceVisible ? 'eye-off-outline' : 'eye-outline'}
+                                    size={20}
+                                    color="black"
+                                />
+                            </TouchableOpacity>
                         </View>
                         <Text style={styles.balanceText}>
-                            ${wallet?.balance?.toLocaleString() || '0'}
+                            {isMainBalanceVisible
+                                ? `${wallet?.currency || 'RWF'} ${Number(wallet?.balance || 0).toLocaleString()}`
+                                : `${wallet?.currency || 'RWF'} ••••••`}
                         </Text>
                         <View style={styles.cardFooter}>
-                            <Text style={styles.accountNo}>{wallet?.accountNumber || '**** **** ****'}</Text>
+                            <Text style={styles.accountNo}>{maskAccountNumber(wallet?.accountNumber)}</Text>
                             <Text style={styles.cardType}>Nexpay Card</Text>
                         </View>
                     </View>
@@ -148,17 +203,21 @@ export default function DashboardScreen({ navigation }: any) {
                     </View>
 
                     {transactions.length > 0 ? (
-                        transactions.map((tx: any) => (
-                            <TransactionItem
-                                key={tx.id}
-                                name={tx.type}
-                                date={new Date(tx.date).toLocaleDateString()}
-                                amount={tx.amount}
-                                type='expense'
-                                icon='arrow-up-outline'
-                                color='#FFEBEE'
-                            />
-                        ))
+                        transactions.map((tx: any) => {
+                            const direction = getTransactionDirection(tx, normalizeId(user?._id));
+
+                            return (
+                                <TransactionItem
+                                    key={tx._id || tx.id}
+                                    name={tx.description || tx.type}
+                                    date={new Date(tx.createdAt || tx.date).toLocaleDateString()}
+                                    amount={Number(tx.amount || 0)}
+                                    type={direction}
+                                    icon={direction === 'income' ? 'arrow-down-outline' : 'arrow-up-outline'}
+                                    color={direction === 'income' ? '#E8F5E9' : '#FFEBEE'}
+                                />
+                            );
+                        })
                     ) : (
                         <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No transactions yet</Text>
                     )}
@@ -202,6 +261,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between', elevation: 4
     },
     cardLabel: { fontSize: 14, fontWeight: '500' },
+    balanceToggleBtn: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     balanceText: { fontSize: 32, fontWeight: '800', marginTop: 10 },
     cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     accountNo: { fontSize: 16, fontWeight: '600' },

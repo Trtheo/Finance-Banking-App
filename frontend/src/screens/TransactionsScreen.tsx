@@ -1,26 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import * as transactionService from '../services/transactionService';
+import * as authService from '../services/authService';
 
 const TransactionItem = ({ item }: any) => {
-  const isIncome = item.type === 'Deposit';
+  const isIncome = item.direction === 'income';
+  const txType = String(item.type || '').toUpperCase();
   
   return (
     <View style={styles.itemRow}>
       <View style={styles.iconContainer}>
-        {item.type === 'Deposit' && <Ionicons name="arrow-down" size={20} color="#27AE60" />}
-        {item.type === 'Withdrawal' && <Ionicons name="arrow-up" size={20} color="#E74C3C" />}
-        {item.type === 'Internet Payment' && <Ionicons name="card-outline" size={20} color="#E74C3C" />}
+        {txType === 'DEPOSIT' && <Ionicons name="arrow-down" size={20} color="#27AE60" />}
+        {txType === 'WITHDRAW' && <Ionicons name="arrow-up" size={20} color="#E74C3C" />}
+        {txType === 'TRANSFER' && (
+          <Ionicons
+            name={isIncome ? 'arrow-down' : 'arrow-up'}
+            size={20}
+            color={isIncome ? '#27AE60' : '#E74C3C'}
+          />
+        )}
       </View>
       <View style={styles.details}>
         <Text style={styles.itemName}>{item.description || item.type}</Text>
-        <Text style={styles.itemDate}>{new Date(item.date).toLocaleString()}</Text>
+        <Text style={styles.itemDate}>{new Date(item.createdAt || item.date).toLocaleString()}</Text>
+        {item.cardLast4 && <Text style={styles.itemCard}>Card ••••{item.cardLast4}</Text>}
       </View>
       <Text style={[styles.amount, { color: isIncome ? '#27AE60' : '#E74C3C' }]}>
-        {isIncome ? '+' : '-'}${item.amount.toFixed(2)}
+        {isIncome ? '+' : '-'}RWF {Number(item.amount || 0).toLocaleString()}
       </Text>
     </View>
   );
@@ -31,14 +40,50 @@ export default function TransactionsScreen({ navigation }: any) {
   const [sections, setSections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const normalizeId = (value: any) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    return String(value?._id || value);
+  };
+
   const fetchTransactions = async () => {
     try {
-      const storedTransactions = await AsyncStorage.getItem('internetPayments');
-      const transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+      setIsLoading(true);
+      const [transactionsResult, userResult] = await Promise.allSettled([
+        transactionService.getHistory(),
+        authService.getMe(),
+      ]);
+
+      if (transactionsResult.status !== 'fulfilled') {
+        throw transactionsResult.reason;
+      }
+
+      const userId = userResult.status === 'fulfilled'
+        ? normalizeId(userResult.value?._id)
+        : '';
+
+      const transactions = Array.isArray(transactionsResult.value) ? transactionsResult.value : [];
+
+      const normalizedTransactions = transactions.map((tx: any) => {
+        const txType = String(tx.type || '').toUpperCase();
+        const receiverId = normalizeId(tx.receiverId);
+        const direction =
+          txType === 'DEPOSIT'
+            ? 'income'
+            : txType === 'TRANSFER' && userId && receiverId === userId
+              ? 'income'
+              : 'expense';
+
+        return {
+          ...tx,
+          direction,
+          sortDate: new Date(tx.createdAt || tx.date || new Date()).toISOString(),
+        };
+      });
 
       // Group by date
-      const groups = transactions.reduce((acc: any, tx: any) => {
-        const date = new Date(tx.date).toLocaleDateString(undefined, {
+      const groups = normalizedTransactions.reduce((acc: any, tx: any) => {
+        const date = new Date(tx.sortDate).toLocaleDateString(undefined, {
           day: 'numeric',
           month: 'long',
           year: 'numeric'
@@ -71,7 +116,7 @@ export default function TransactionsScreen({ navigation }: any) {
     ...section,
     data: section.data.filter((tx: any) => {
       if (filter === 'All') return true;
-      const isIncome = tx.type === 'Deposit';
+      const isIncome = tx.direction === 'income';
       if (filter === 'Income') return isIncome;
       if (filter === 'Expense') return !isIncome;
       return true;
@@ -110,7 +155,7 @@ export default function TransactionsScreen({ navigation }: any) {
 
       <SectionList
         sections={filteredSections}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.id}
         renderItem={({ item }) => <TransactionItem item={item} />}
         renderSectionHeader={({ section: { title } }) => (
           <Text style={styles.sectionHeader}>{title}</Text>
@@ -145,6 +190,7 @@ const styles = StyleSheet.create({
   details: { flex: 1, marginLeft: 15 },
   itemName: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
   itemDate: { fontSize: 12, color: '#BDBDBD' },
+  itemCard: { fontSize: 12, color: '#666', marginTop: 2, fontWeight: '600' },
   amount: { fontSize: 16, fontWeight: '700' },
   avatarPlaceholder: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EEE' }
 });

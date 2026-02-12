@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 import Wallet from '../models/Wallet';
+import Card from '../models/cardModel';
 import { generateAccountNumber } from '../utils/accountNumberGenerator';
 import { sendWelcomeEmail, sendLoginOtp } from './notification.service';
 import { generalOtp } from '../utils/otp';
@@ -14,6 +15,20 @@ const generateToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '30d',
     });
+};
+
+const generateCardNumber = () =>
+    Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
+
+const generateCVV = () =>
+    Math.floor(100 + Math.random() * 900).toString();
+
+const generateUniqueCardNumber = async () => {
+    let cardNumber = generateCardNumber();
+    while (await Card.exists({ cardNumber })) {
+        cardNumber = generateCardNumber();
+    }
+    return cardNumber;
 };
 
 // Register User
@@ -42,11 +57,25 @@ export const registerUser = async (userData: any) => {
     if (user) {
         // Create Wallet for the user
         const accountNumber = generateAccountNumber();
-        await Wallet.create({
+        const wallet = await Wallet.create({
             userId: user._id.toString(),
             accountNumber,
             balance: 0,
             currency: 'RWF',
+        });
+
+        // Create default Platinum card for the new account
+        const defaultCardNumber = await generateUniqueCardNumber();
+        await Card.create({
+            cardNumber: defaultCardNumber,
+            cvv: generateCVV(),
+            expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
+            cardHolderName: user.fullName,
+            walletId: wallet._id,
+            cardType: 'debit',
+            cardTier: 'PLATINUM',
+            balance: 0,
+            isDefault: true,
         });
 
         // Send welcome email in the background (non-blocking)

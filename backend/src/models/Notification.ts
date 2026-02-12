@@ -14,6 +14,7 @@ export interface INotification extends Document {
     message: string;
     amount?: number;
     reference?: string;
+    cardLast4?: string;
     isRead: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -31,6 +32,7 @@ const NotificationSchema: Schema = new Schema(
         message: { type: String, required: true },
         amount: { type: Number },
         reference: { type: String },
+        cardLast4: { type: String },
         isRead: { type: Boolean, default: false },
     },
     { timestamps: true }

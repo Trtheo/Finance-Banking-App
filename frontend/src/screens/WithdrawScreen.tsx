@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as transactionService from '../services/transactionService';
+import * as walletService from '../services/walletService';
 
 export default function WithdrawScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
@@ -20,52 +21,20 @@ export default function WithdrawScreen({ navigation }: any) {
 
         try {
             setIsLoading(true);
+
+            await transactionService.withdraw(numAmount, description.trim() || undefined);
+
+            const wallet = await walletService.getWalletMe().catch(() => null);
             
-            const storedBalance = await AsyncStorage.getItem('userBalance');
-            const currentBalance = storedBalance ? parseFloat(storedBalance) : 1000.00;
-            
-            if (currentBalance < numAmount) {
-                Alert.alert('Insufficient Balance', 'You do not have enough balance for this withdrawal.');
-                return;
-            }
-            
-            const newBalance = currentBalance - numAmount;
-            await AsyncStorage.setItem('userBalance', newBalance.toString());
-            
-            const transaction = {
-                id: Date.now().toString(),
-                type: 'Withdrawal',
-                amount: numAmount,
-                description: description || 'Withdrawal',
-                date: new Date().toISOString(),
-                status: 'Completed'
-            };
-            
-            const existingTransactions = await AsyncStorage.getItem('internetPayments');
-            const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-            transactions.unshift(transaction);
-            await AsyncStorage.setItem('internetPayments', JSON.stringify(transactions));
-            
-            const notification = {
-                id: Date.now().toString(),
-                title: 'Withdrawal Successful',
-                message: `$${numAmount.toFixed(2)} has been withdrawn from your account`,
-                date: new Date().toISOString(),
-                read: false,
-                type: 'withdrawal',
-                amount: numAmount
-            };
-            
-            const existingNotifications = await AsyncStorage.getItem('notifications');
-            const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
-            notifications.unshift(notification);
-            await AsyncStorage.setItem('notifications', JSON.stringify(notifications));
-            
-            Alert.alert('Success', `Withdrawal of $${numAmount.toFixed(2)} completed successfully! New balance: $${newBalance.toFixed(2)}`, [
+            const balanceInfo = wallet
+                ? ` New balance: ${wallet?.currency || 'RWF'} ${Number(wallet?.balance || 0).toLocaleString()}`
+                : '';
+
+            Alert.alert('Success', `Withdrawal of RWF ${numAmount.toLocaleString()} completed successfully!${balanceInfo}`, [
                 { text: 'OK', onPress: () => navigation.navigate('Main') }
             ]);
         } catch (error: any) {
-            Alert.alert('Error', 'Withdrawal failed. Please try again.');
+            Alert.alert('Withdrawal Failed', error.response?.data?.message || error.message || 'Withdrawal failed. Please try again.');
         } finally {
             setIsLoading(false);
         }

@@ -1,85 +1,38 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from './api';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002';
-
-const getAuthToken = async () => {
-    return await AsyncStorage.getItem('token');
-};
-
-export const createCard = async (cardData: {
-    cardType: string;
-    cardholderName: string;
+export interface CardItem {
+    _id: string;
     cardNumber: string;
+    cardHolderName?: string;
+    cardholderName?: string;
     expiryDate: string;
-    cvv: string;
-}) => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/api/cards`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(cardData),
-    });
+    status: 'active' | 'blocked';
+    cardType?: string;
+    network?: string;
+    createdAt?: string;
+}
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create card');
-    }
-
-    return await response.json();
+export const createCard = async (cardHolderName: string) => {
+    const response = await api.post('/cards', { cardHolderName });
+    return response.data?.card ?? response.data;
 };
 
-export const getUserCards = async () => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/api/cards/user`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch cards');
-    }
-
-    return await response.json();
+export const getCards = async (): Promise<CardItem[]> => {
+    const response = await api.get('/cards');
+    return response.data;
 };
 
-export const updateCard = async (cardId: string, updateData: any) => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/api/cards/${cardId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateData),
-    });
+export const freezeCard = async (cardId: string) => {
+    const response = await api.patch(`/cards/${cardId}/freeze`);
+    return response.data;
+};
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update card');
-    }
-
-    return await response.json();
+export const unfreezeCard = async (cardId: string) => {
+    const response = await api.patch(`/cards/${cardId}/unfreeze`);
+    return response.data;
 };
 
 export const deleteCard = async (cardId: string) => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/api/cards/${cardId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete card');
-    }
-
-    return await response.json();
+    const response = await api.delete(`/cards/${cardId}`);
+    return response.data;
 };

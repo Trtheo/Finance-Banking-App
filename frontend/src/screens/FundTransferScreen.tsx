@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, Dimensions, Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from '@react-navigation/native';
 import * as transactionService from '../services/transactionService';
+import * as cardService from '../services/cardService';
 
 const { width } = Dimensions.get('window');
 
@@ -13,7 +16,42 @@ export default function FundTransferScreen({ navigation }: any) {
   const [recipientAccount, setRecipientAccount] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [cards, setCards] = useState<any[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState('');
+  const [isLoadingCards, setIsLoadingCards] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  const loadCards = useCallback(async () => {
+    try {
+      setIsLoadingCards(true);
+      const apiCards = await cardService.getCards();
+      const cardsList = Array.isArray(apiCards) ? apiCards : [];
+      setCards(cardsList);
+
+      if (cardsList.length > 0) {
+        const defaultCard = cardsList.find((card: any) => card.isDefault) || cardsList[0];
+        setSelectedCardId(defaultCard?._id || '');
+      } else {
+        setSelectedCardId('');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load cards');
+    } finally {
+      setIsLoadingCards(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCards();
+    }, [loadCards])
+  );
+
+  const cardLabel = (card: any) => {
+    const suffix = String(card.cardNumber || '').slice(-4) || '0000';
+    const tier = (card.cardTier || 'PLATINUM').toUpperCase();
+    return `${tier} ••••${suffix}`;
+  };
 
   const handleTransfer = async () => {
     if (!recipientAccount || !amount) {
@@ -27,9 +65,24 @@ export default function FundTransferScreen({ navigation }: any) {
       return;
     }
 
+    if (cards.length === 0) {
+      Alert.alert('No Card', 'You need at least one card to make a transfer.');
+      return;
+    }
+
+    if (!selectedCardId) {
+      Alert.alert('Select Card', 'Please select a card to use for this transfer.');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await transactionService.transfer(recipientAccount, numAmount, description);
+      await transactionService.transfer(
+        recipientAccount.trim(),
+        numAmount,
+        description.trim() || undefined,
+        selectedCardId
+      );
 
       Alert.alert('Success', `Successfully transferred RWF ${numAmount.toLocaleString()} to ${recipientAccount}`, [
         { text: 'OK', onPress: () => navigation.navigate('Main') }
@@ -77,6 +130,38 @@ export default function FundTransferScreen({ navigation }: any) {
             />
           </View>
 
+          {isLoadingCards ? (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Transfer From</Text>
+              <ActivityIndicator size="small" color="#FFDE31" />
+            </View>
+          ) : cards.length > 1 ? (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Transfer From Card</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedCardId}
+                  onValueChange={(itemValue) => setSelectedCardId(itemValue)}
+                >
+                  {cards.map((card: any) => (
+                    <Picker.Item
+                      key={card._id}
+                      label={cardLabel(card)}
+                      value={card._id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          ) : cards.length === 1 ? (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Transfer From Card</Text>
+              <View style={styles.readOnlyCardBox}>
+                <Text style={styles.readOnlyCardText}>{cardLabel(cards[0])}</Text>
+              </View>
+            </View>
+          ) : null}
+
           <Text style={styles.label}>Description (Optional)</Text>
           <View style={[styles.inputContainer, { height: 100, alignItems: 'flex-start' }]}>
             <Ionicons name="chatbubble-outline" size={20} color="#666" style={[styles.icon, { marginTop: 12 }]} />
@@ -105,7 +190,7 @@ export default function FundTransferScreen({ navigation }: any) {
         <View style={styles.infoSection}>
           <Ionicons name="information-circle-outline" size={20} color="#888" />
           <Text style={styles.infoText}>
-            Transfers between Nexpay accounts are instant and free. Please verify the recipient's account number before confirming.
+            Transfers between Nexpay accounts are instant and free. Maximum transfer per card is RWF 5,000,000.
           </Text>
         </View>
       </ScrollView>
@@ -144,6 +229,24 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, marginLeft: 10, fontSize: 16, color: '#000' },
   icon: { marginRight: 5 },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderRadius: 15,
+    backgroundColor: '#F8F8F8',
+  },
+  readOnlyCardBox: {
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderRadius: 15,
+    backgroundColor: '#F8F8F8',
+    paddingHorizontal: 15,
+    paddingVertical: 16,
+  },
+  readOnlyCardText: {
+    fontSize: 16,
+    color: '#333',
+  },
   transferButton: {
     backgroundColor: '#FFDE31',
     borderRadius: 15,

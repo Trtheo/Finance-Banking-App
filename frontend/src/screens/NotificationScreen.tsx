@@ -1,30 +1,33 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     SafeAreaView, ActivityIndicator, RefreshControl, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import * as notificationService from '../services/notificationService';
 
-interface LocalNotification {
-    id: string;
+interface AppNotification {
+    _id: string;
     title: string;
     message: string;
-    date: string;
-    read: boolean;
     type: string;
     amount?: number;
+    reference?: string;
+    cardLast4?: string;
+    isRead: boolean;
+    createdAt: string;
 }
 
 const getIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'deposit':
+    switch (String(type).toUpperCase()) {
+        case 'DEPOSIT':
             return { name: 'arrow-down-circle', color: '#2E7D32', bg: '#E8F5E9' };
-        case 'withdrawal':
+        case 'WITHDRAW':
+        case 'TRANSFER_SENT':
             return { name: 'arrow-up-circle', color: '#C62828', bg: '#FFEBEE' };
-        case 'internet payment':
-            return { name: 'card-outline', color: '#EF6C00', bg: '#FFF3E0' };
+        case 'TRANSFER_RECEIVED':
+            return { name: 'arrow-down-circle', color: '#2E7D32', bg: '#E8F5E9' };
         default:
             return { name: 'notifications', color: '#9E9E9E', bg: '#F5F5F5' };
     }
@@ -36,21 +39,21 @@ const isSameDay = (left: Date, right: Date) => (
     && left.getDate() === right.getDate()
 );
 
-const isToday = (dateString: string) => {
-    const created = new Date(dateString);
+const isToday = (dateValue: string) => {
+    const created = new Date(dateValue);
     return isSameDay(created, new Date());
 };
 
-const formatTime = (dateString: string) => (
-    new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const formatTime = (dateValue: string) => (
+    new Date(dateValue).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 );
 
-const NotificationItem = ({ item, onPress }: { item: LocalNotification; onPress: () => void }) => {
+const NotificationItem = ({ item, onPress }: { item: AppNotification; onPress: () => void }) => {
     const icon = getIcon(item.type);
 
     return (
         <TouchableOpacity
-            style={[styles.notificationItem, !item.read && styles.unreadItem]}
+            style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
             onPress={onPress}
             activeOpacity={0.9}
         >
@@ -61,13 +64,17 @@ const NotificationItem = ({ item, onPress }: { item: LocalNotification; onPress:
             <View style={styles.contentContainer}>
                 <View style={styles.headerRow}>
                     <Text style={styles.notificationTitle}>{item.title}</Text>
-                    <Text style={styles.timeText}>{formatTime(item.date)}</Text>
+                    <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
                 </View>
 
                 <Text style={styles.notificationMessage}>{item.message}</Text>
 
                 {typeof item.amount === 'number' && (
-                    <Text style={styles.amountText}>${item.amount.toFixed(2)}</Text>
+                    <Text style={styles.amountText}>RWF {Number(item.amount || 0).toLocaleString()}</Text>
+                )}
+
+                {item.cardLast4 && (
+                    <Text style={styles.cardText}>Card ••••{item.cardLast4}</Text>
                 )}
             </View>
         </TouchableOpacity>
@@ -85,7 +92,7 @@ const EmptyNotifications = () => (
 );
 
 export default function NotificationScreen({ navigation }: any) {
-    const [notifications, setNotifications] = useState<LocalNotification[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -95,11 +102,11 @@ export default function NotificationScreen({ navigation }: any) {
         }
 
         try {
-            const storedNotifications = await AsyncStorage.getItem('notifications');
-            const notifications = storedNotifications ? JSON.parse(storedNotifications) : [];
-            setNotifications(notifications);
+            const data = await notificationService.getMyNotifications(100);
+            setNotifications(Array.isArray(data) ? data : []);
         } catch (error: any) {
             console.log('Error loading notifications:', error);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to load notifications');
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
@@ -118,26 +125,43 @@ export default function NotificationScreen({ navigation }: any) {
     };
 
     const markAsRead = async (notificationId: string) => {
-        const updatedNotifications = notifications.map(item =>
-            item.id === notificationId ? { ...item, read: true } : item
+        const target = notifications.find(item => item._id === notificationId);
+        if (!target || target.isRead) return;
+
+        setNotifications(prev =>
+            prev.map(item => (item._id === notificationId ? { ...item, isRead: true } : item))
         );
-        setNotifications(updatedNotifications);
-        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+
+        try {
+            await notificationService.markNotificationAsRead(notificationId);
+        } catch (error: any) {
+            setNotifications(prev =>
+                prev.map(item => (item._id === notificationId ? { ...item, isRead: false } : item))
+            );
+            Alert.alert('Error', error.response?.data?.message || 'Failed to mark notification as read');
+        }
     };
 
     const markAllAsRead = async () => {
-        const updatedNotifications = notifications.map(item => ({ ...item, read: true }));
-        setNotifications(updatedNotifications);
-        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+        const hasUnread = notifications.some(item => !item.isRead);
+        if (!hasUnread) return;
+
+        setNotifications(prev => prev.map(item => ({ ...item, isRead: true })));
+        try {
+            await notificationService.markAllNotificationsAsRead();
+        } catch (error: any) {
+            await fetchNotifications(false);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to mark all notifications as read');
+        }
     };
 
     const todayNotifications = useMemo(
-        () => notifications.filter(item => isToday(item.date)),
+        () => notifications.filter(item => isToday(item.createdAt)),
         [notifications]
     );
 
     const earlierNotifications = useMemo(
-        () => notifications.filter(item => !isToday(item.date)),
+        () => notifications.filter(item => !isToday(item.createdAt)),
         [notifications]
     );
 
@@ -185,9 +209,9 @@ export default function NotificationScreen({ navigation }: any) {
                             <Text style={styles.sectionTitle}>Today</Text>
                             {todayNotifications.map((item) => (
                                 <NotificationItem
-                                    key={item.id}
+                                    key={item._id}
                                     item={item}
-                                    onPress={() => markAsRead(item.id)}
+                                    onPress={() => markAsRead(item._id)}
                                 />
                             ))}
                         </View>
@@ -198,9 +222,9 @@ export default function NotificationScreen({ navigation }: any) {
                             <Text style={styles.sectionTitle}>Earlier</Text>
                             {earlierNotifications.map((item) => (
                                 <NotificationItem
-                                    key={item.id}
+                                    key={item._id}
                                     item={item}
-                                    onPress={() => markAsRead(item.id)}
+                                    onPress={() => markAsRead(item._id)}
                                 />
                             ))}
                         </View>
@@ -328,6 +352,12 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#000',
         marginBottom: 6,
+    },
+    cardText: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 4,
     },
     referenceText: {
         fontSize: 12,

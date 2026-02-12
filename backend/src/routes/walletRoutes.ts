@@ -39,6 +39,8 @@ router.get('/me', protect, getWallet);
  *                 type: number
  *               description:
  *                 type: string
+ *               cardId:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Deposit successful
