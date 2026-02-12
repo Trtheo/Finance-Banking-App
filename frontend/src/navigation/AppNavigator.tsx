@@ -14,6 +14,8 @@ import NotificationScreen from "../screens/NotificationScreen";
 import DepositScreen from "../screens/DepositScreen";
 import WithdrawScreen from "../screens/WithdrawScreen";
 import CardManagementScreen from "../screens/CardManagementScreen";
+import InternetPaymentScreen from "../screens/InternetPaymentScreen";
+import InternetPaymentSummaryScreen from "../screens/InternetPaymentSummaryScreen";
 
 const Stack = createStackNavigator();
 
@@ -36,6 +38,8 @@ export default function AppNavigator() {
         <Stack.Screen name="Transactions" component={TransactionsScreen} />
         <Stack.Screen name="AddCard" component={AddCardScreen} />
         <Stack.Screen name="CardDetails" component={CardDetailsScreen} />
+        <Stack.Screen name="InternetPayment" component={InternetPaymentScreen} />
+        <Stack.Screen name="InternetPaymentSummary" component={InternetPaymentSummaryScreen} />
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="Notification" component={NotificationScreen} />
       </Stack.Navigator>

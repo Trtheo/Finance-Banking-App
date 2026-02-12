@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function PaymentsScreen() {
+export default function PaymentsScreen({ navigation }: any) {
     const [selectedBill, setSelectedBill] = useState<string | null>(null);
     const [menuVisible, setMenuVisible] = useState(false);
 
@@ -11,7 +11,7 @@ export default function PaymentsScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.mainContent}>
                 <Text style={styles.title}>Payments</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.openMenuButton}
                     onPress={() => setMenuVisible(true)}
                 >
@@ -31,38 +31,48 @@ export default function PaymentsScreen() {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {[
-                                { title: 'Payments', data: [
-                                    { id: '1', label: 'Internet', icon: 'wifi' },
-                                    { id: '2', label: 'Electricity', icon: 'flash' },
-                                    { id: '3', label: 'Water', icon: 'water' },
-                                    { id: '4', label: 'Television', icon: 'tv' },
-                                    { id: '5', label: 'Games', icon: 'game-controller' },
-                                    { id: '6', label: 'Tax', icon: 'receipt' },
-                                    { id: '7', label: 'Lifestyle', icon: 'bag' },
-                                    { id: '8', label: 'VA Number', icon: 'phone-portrait' },
-                                ]},
-                                { title: 'Insurance', data: [
-                                    { id: '9', label: 'Health', icon: 'heart' },
-                                    { id: '10', label: 'Car', icon: 'car' },
-                                    { id: '11', label: 'Motorcycle', icon: 'bicycle' },
-                                    { id: '12', label: 'Property', icon: 'business' },
-                                ]},
-                                { title: 'Others', data: [
-                                    { id: '13', label: 'Top Up', icon: 'wallet' },
-                                    { id: '14', label: 'Investment', icon: 'trending-up' },
-                                    { id: '15', label: 'Credit', icon: 'card' },
-                                    { id: '16', label: 'Donate', icon: 'gift' },
-                                ]},
+                                {
+                                    title: 'Payments', data: [
+                                        { id: '1', label: 'Internet', icon: 'wifi' },
+                                        { id: '2', label: 'Electricity', icon: 'flash' },
+                                        { id: '3', label: 'Water', icon: 'water' },
+                                        { id: '4', label: 'Television', icon: 'tv' },
+                                        { id: '5', label: 'Games', icon: 'game-controller' },
+                                        { id: '6', label: 'Tax', icon: 'receipt' },
+                                        { id: '7', label: 'Lifestyle', icon: 'bag' },
+                                        { id: '8', label: 'VA Number', icon: 'phone-portrait' },
+                                    ]
+                                },
+                                {
+                                    title: 'Insurance', data: [
+                                        { id: '9', label: 'Health', icon: 'heart' },
+                                        { id: '10', label: 'Car', icon: 'car' },
+                                        { id: '11', label: 'Motorcycle', icon: 'bicycle' },
+                                        { id: '12', label: 'Property', icon: 'business' },
+                                    ]
+                                },
+                                {
+                                    title: 'Others', data: [
+                                        { id: '13', label: 'Top Up', icon: 'wallet' },
+                                        { id: '14', label: 'Investment', icon: 'trending-up' },
+                                        { id: '15', label: 'Credit', icon: 'card' },
+                                        { id: '16', label: 'Donate', icon: 'gift' },
+                                    ]
+                                },
                             ].map((section) => (
                                 <View key={section.title} style={styles.section}>
                                     <Text style={styles.sectionTitle}>{section.title}</Text>
                                     <View style={styles.grid}>
                                         {section.data.map((item) => (
-                                            <TouchableOpacity 
-                                                key={item.id} 
+                                            <TouchableOpacity
+                                                key={item.id}
                                                 style={styles.itemContainer}
                                                 onPress={() => {
-                                                    setSelectedBill(item.label);
+                                                    if (item.label === 'Internet') {
+                                                        navigation.navigate('InternetPayment');
+                                                    } else {
+                                                        setSelectedBill(item.label);
+                                                    }
                                                     setMenuVisible(false);
                                                 }}
                                             >

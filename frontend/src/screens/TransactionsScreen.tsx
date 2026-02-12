@@ -2,32 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as transactionService from '../services/transactionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
-const TransactionItem = ({ item, currentUserId }: any) => {
-  const isTransferIn = item.type === 'TRANSFER' && String(item.receiverId) === String(currentUserId);
-  const isIncome = item.type === 'DEPOSIT' || isTransferIn;
-
-  const displayType = item.type === 'TRANSFER'
-    ? isTransferIn
-      ? 'TRANSFER_RECEIVE'
-      : 'TRANSFER'
-    : item.type;
+const TransactionItem = ({ item }: any) => {
+  const isIncome = item.type === 'Deposit';
+  
   return (
     <View style={styles.itemRow}>
       <View style={styles.iconContainer}>
-        {displayType === 'DEPOSIT' && <Ionicons name="arrow-down" size={20} color="black" />}
-        {displayType === 'WITHDRAW' && <Ionicons name="arrow-up" size={20} color="black" />}
-        {displayType === 'TRANSFER' && <Ionicons name="send-outline" size={20} color="black" />}
-        {displayType === 'TRANSFER_RECEIVE' && <Ionicons name="download-outline" size={20} color="black" />}
+        {item.type === 'Deposit' && <Ionicons name="arrow-down" size={20} color="#27AE60" />}
+        {item.type === 'Withdrawal' && <Ionicons name="arrow-up" size={20} color="#E74C3C" />}
+        {item.type === 'Internet Payment' && <Ionicons name="card-outline" size={20} color="#E74C3C" />}
       </View>
       <View style={styles.details}>
         <Text style={styles.itemName}>{item.description || item.type}</Text>
-        <Text style={styles.itemDate}>{new Date(item.createdAt).toLocaleString()}</Text>
+        <Text style={styles.itemDate}>{new Date(item.date).toLocaleString()}</Text>
       </View>
-      <Text style={[styles.amount, { color: isIncome ? '#27AE60' : '#000' }]}>
-        {isIncome ? '+' : '-'} {item.currency || 'RWF'} {item.amount.toLocaleString()}
+      <Text style={[styles.amount, { color: isIncome ? '#27AE60' : '#E74C3C' }]}>
+        {isIncome ? '+' : '-'}${item.amount.toFixed(2)}
       </Text>
     </View>
   );
@@ -37,54 +30,48 @@ export default function TransactionsScreen({ navigation }: any) {
   const [filter, setFilter] = useState('All');
   const [sections, setSections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          const parsed = JSON.parse(userData);
-          if (parsed?._id) {
-            setCurrentUserId(parsed._id);
-          }
-        }
+  const fetchTransactions = async () => {
+    try {
+      const storedTransactions = await AsyncStorage.getItem('internetPayments');
+      const transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
 
-        const rawData = await transactionService.getHistory();
+      // Group by date
+      const groups = transactions.reduce((acc: any, tx: any) => {
+        const date = new Date(tx.date).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(tx);
+        return acc;
+      }, {});
 
-        // Group by date
-        const groups = rawData.reduce((acc: any, tx: any) => {
-          const date = new Date(tx.createdAt).toLocaleDateString(undefined, {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-          });
-          if (!acc[date]) acc[date] = [];
-          acc[date].push(tx);
-          return acc;
-        }, {});
+      const sectionData = Object.keys(groups).map(date => ({
+        title: date,
+        data: groups[date]
+      }));
 
-        const sectionData = Object.keys(groups).map(date => ({
-          title: date,
-          data: groups[date]
-        }));
+      setSections(sectionData);
+    } catch (error: any) {
+      console.error('Error fetching transactions:', error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        setSections(sectionData);
-      } catch (error: any) {
-        console.error('Error fetching transactions:', error.message);
-        Alert.alert('Error', 'Failed to load transactions');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTransactions();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchTransactions();
+    }, [])
+  );
 
   const filteredSections = sections.map(section => ({
     ...section,
     data: section.data.filter((tx: any) => {
       if (filter === 'All') return true;
-      const isIncome = tx.type === 'DEPOSIT' || (tx.type === 'TRANSFER' && String(tx.receiverId) === String(currentUserId));
+      const isIncome = tx.type === 'Deposit';
       if (filter === 'Income') return isIncome;
       if (filter === 'Expense') return !isIncome;
       return true;
@@ -123,8 +110,8 @@ export default function TransactionsScreen({ navigation }: any) {
 
       <SectionList
         sections={filteredSections}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <TransactionItem item={item} currentUserId={currentUserId} />}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <TransactionItem item={item} />}
         renderSectionHeader={({ section: { title } }) => (
           <Text style={styles.sectionHeader}>{title}</Text>
         )}
