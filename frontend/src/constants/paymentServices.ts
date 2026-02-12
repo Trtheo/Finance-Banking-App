@@ -12,6 +12,8 @@ export interface PaymentField {
     placeholder: string;
     icon: string;
     keyboardType?: 'default' | 'numeric' | 'number-pad';
+    required?: boolean;
+    alternativeGroup?: string;
 }
 
 export interface PaymentServiceConfig {
@@ -207,6 +209,36 @@ export const PAYMENT_SERVICE_CONFIGS: PaymentServiceConfig[] = [
         providers: REGULAR_PROVIDERS,
         fields: [
             { key: 'loanAccountNumber', label: 'Credit Account', placeholder: 'Enter credit/loan account number', icon: 'card-outline' },
+        ],
+    },
+    {
+        key: 'transport',
+        label: 'Transport',
+        section: 'Others',
+        icon: 'bus',
+        providers: [
+            { id: 'kigali-bus', name: 'Kigali Bus', icon: 'bus-outline' },
+            { id: 'swift-ride', name: 'Swift Ride', icon: 'car-outline' },
+            { id: 'city-transit', name: 'City Transit', icon: 'navigate-outline' },
+        ],
+        fields: [
+            {
+                key: 'merchantCode',
+                label: 'Merchant Code',
+                placeholder: 'Enter merchant code',
+                icon: 'qr-code-outline',
+                required: false,
+                alternativeGroup: 'transport_identifier',
+            },
+            {
+                key: 'phoneNumber',
+                label: 'Phone Number',
+                placeholder: 'Enter phone number',
+                icon: 'call-outline',
+                keyboardType: 'number-pad',
+                required: false,
+                alternativeGroup: 'transport_identifier',
+            },
         ],
     },
     {

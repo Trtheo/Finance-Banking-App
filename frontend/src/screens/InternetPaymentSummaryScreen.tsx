@@ -180,7 +180,9 @@ export default function InternetPaymentSummaryScreen({ navigation, route }: any)
                         <Text style={styles.summaryValue}>RWF {adminFee.toLocaleString()}</Text>
                     </View>
 
-                    {serviceConfig.fields.map((field) => (
+                    {serviceConfig.fields
+                        .filter((field) => String(formValues[field.key] || '').trim().length > 0)
+                        .map((field) => (
                         <View key={field.key} style={styles.summaryItem}>
                             <Text style={styles.summaryLabel}>{field.label}</Text>
                             <Text style={styles.summaryValue}>{formValues[field.key] || '-'}</Text>
