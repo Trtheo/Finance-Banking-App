@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as cardService from '../services/cardService';
+import * as cardService from '../../services/cardService';
 
 const WITHDRAW_LIMIT_PER_CARD = 5_000_000;
 

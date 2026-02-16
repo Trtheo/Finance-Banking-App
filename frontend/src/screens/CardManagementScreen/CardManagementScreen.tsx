@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import * as cardService from '../services/cardService';
-import * as walletService from '../services/walletService';
+import * as cardService from '../../services/cardService';
+import * as walletService from '../../services/walletService';
 
 export default function CardManagementScreen({ navigation }: any) {
     const [cards, setCards] = useState<any[]>([]);

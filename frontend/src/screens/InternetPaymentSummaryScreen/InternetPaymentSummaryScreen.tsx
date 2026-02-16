@@ -4,10 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from '@react-navigation/native';
-import * as transactionService from '../services/transactionService';
-import * as walletService from '../services/walletService';
-import * as cardService from '../services/cardService';
-import { getPaymentServiceByKey } from '../constants/paymentServices';
+import * as transactionService from '../../services/transactionService';
+import * as walletService from '../../services/walletService';
+import * as cardService from '../../services/cardService';
+import { getPaymentServiceByKey } from '../../constants/paymentServices';
 
 export default function InternetPaymentSummaryScreen({ navigation, route }: any) {
     const {

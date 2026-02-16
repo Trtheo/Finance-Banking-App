@@ -48,3 +48,7 @@ export const markAllNotificationsAsRead = async (userId: string) => {
 
     return { updatedCount: result.modifiedCount };
 };
+
+export const deleteInAppNotification = async (userId: string, notificationId: string) => {
+    return await Notification.findOneAndDelete({ _id: notificationId, userId });
+};

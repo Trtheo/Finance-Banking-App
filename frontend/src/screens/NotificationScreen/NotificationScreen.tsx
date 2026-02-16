@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import * as notificationService from '../services/notificationService';
+import * as notificationService from '../../services/notificationService';
 
 interface AppNotification {
     _id: string;
@@ -48,7 +48,7 @@ const formatTime = (dateValue: string) => (
     new Date(dateValue).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 );
 
-const NotificationItem = ({ item, onPress }: { item: AppNotification; onPress: () => void }) => {
+const NotificationItem = ({ item, onPress, onDelete }: { item: AppNotification; onPress: () => void; onDelete: () => void }) => {
     const icon = getIcon(item.type);
 
     return (
@@ -77,6 +77,10 @@ const NotificationItem = ({ item, onPress }: { item: AppNotification; onPress: (
                     <Text style={styles.cardText}>Card ••••{item.cardLast4}</Text>
                 )}
             </View>
+
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+                <Ionicons name="trash-outline" size={20} color="#FF5252" />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 };
@@ -142,15 +146,41 @@ export default function NotificationScreen({ navigation }: any) {
         }
     };
 
+    const deleteNotification = async (notificationId: string) => {
+        Alert.alert(
+            'Delete Notification',
+            'Are you sure you want to delete this notification?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const previousNotifications = [...notifications];
+                        setNotifications(prev => prev.filter(item => item._id !== notificationId));
+
+                        try {
+                            await notificationService.deleteNotification(notificationId);
+                        } catch (error: any) {
+                            setNotifications(previousNotifications);
+                            Alert.alert('Error', error.response?.data?.message || 'Failed to delete notification');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const markAllAsRead = async () => {
         const hasUnread = notifications.some(item => !item.isRead);
         if (!hasUnread) return;
 
+        const previousNotifications = [...notifications];
         setNotifications(prev => prev.map(item => ({ ...item, isRead: true })));
         try {
             await notificationService.markAllNotificationsAsRead();
         } catch (error: any) {
-            await fetchNotifications(false);
+            setNotifications(previousNotifications);
             Alert.alert('Error', error.response?.data?.message || 'Failed to mark all notifications as read');
         }
     };
@@ -186,7 +216,7 @@ export default function NotificationScreen({ navigation }: any) {
                 <Text style={styles.headerTitle}>Notifications</Text>
 
                 <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
-                    <Text style={styles.markAllText}>Mark all</Text>
+                    <Text style={styles.markAllText}>Mark all as read</Text>
                 </TouchableOpacity>
             </View>
 
@@ -212,6 +242,7 @@ export default function NotificationScreen({ navigation }: any) {
                                     key={item._id}
                                     item={item}
                                     onPress={() => markAsRead(item._id)}
+                                    onDelete={() => deleteNotification(item._id)}
                                 />
                             ))}
                         </View>
@@ -225,6 +256,7 @@ export default function NotificationScreen({ navigation }: any) {
                                     key={item._id}
                                     item={item}
                                     onPress={() => markAsRead(item._id)}
+                                    onDelete={() => deleteNotification(item._id)}
                                 />
                             ))}
                         </View>
@@ -273,10 +305,11 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     markAllButton: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
         backgroundColor: '#FFF',
+        elevation: 1,
     },
     markAllText: {
         fontSize: 12,
@@ -308,10 +341,12 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.07,
         shadowRadius: 3,
+        alignItems: 'flex-start',
     },
     unreadItem: {
         borderWidth: 1,
         borderColor: '#FFE082',
+        backgroundColor: '#FFFBF0',
     },
     iconContainer: {
         width: 48,
@@ -362,6 +397,13 @@ const styles = StyleSheet.create({
     referenceText: {
         fontSize: 12,
         color: '#888',
+    },
+    deleteButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#FFEBEE',
+        alignSelf: 'center',
+        marginLeft: 4,
     },
     emptyContainer: {
         flex: 1,

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { PAYMENT_SERVICE_CONFIGS } from '../constants/paymentServices';
+import { PAYMENT_SERVICE_CONFIGS } from '../../constants/paymentServices';
 
 export default function PaymentsScreen({ navigation }: any) {
     const groupedSections = useMemo(() => {

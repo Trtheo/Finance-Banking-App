@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './AddCardScreen.styles';
-import * as cardService from '../services/cardService';
+import * as cardService from '../../services/cardService';
 
 interface NavigationProps {
     navigate: (screen: string) => void;

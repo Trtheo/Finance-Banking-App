@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getPaymentServiceByKey, PaymentField } from '../constants/paymentServices';
+import { getPaymentServiceByKey, PaymentField } from '../../constants/paymentServices';
 
 const buildInitialFormValues = (fields: PaymentField[]) => (
     fields.reduce((acc: Record<string, string>, field) => {

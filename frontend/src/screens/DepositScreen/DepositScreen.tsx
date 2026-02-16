@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from '@react-navigation/native';
-import * as transactionService from '../services/transactionService';
-import * as cardService from '../services/cardService';
+import * as transactionService from '../../services/transactionService';
+import * as cardService from '../../services/cardService';
 
 export default function DepositScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');
