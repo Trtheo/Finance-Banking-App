@@ -38,9 +38,39 @@ export default function InternetPaymentScreen({ navigation, route }: any) {
         setFormValues(prev => ({ ...prev, [fieldKey]: value }));
     };
 
-    const hasMissingRequiredField = () => (
-        serviceConfig.fields.some((field) => !String(formValues[field.key] || '').trim())
-    );
+    const getMissingRequirementMessage = () => {
+        const standaloneRequiredFields = serviceConfig.fields.filter(
+            (field) => field.required !== false && !field.alternativeGroup
+        );
+        const missingStandaloneField = standaloneRequiredFields.find(
+            (field) => !String(formValues[field.key] || '').trim()
+        );
+        if (missingStandaloneField) {
+            return `${missingStandaloneField.label} is required.`;
+        }
+
+        const alternativeGroups = Array.from(
+            new Set(
+                serviceConfig.fields
+                    .map((field) => field.alternativeGroup)
+                    .filter(Boolean)
+            )
+        ) as string[];
+
+        for (const groupKey of alternativeGroups) {
+            const groupedFields = serviceConfig.fields.filter((field) => field.alternativeGroup === groupKey);
+            const hasAnyGroupValue = groupedFields.some((field) => String(formValues[field.key] || '').trim().length > 0);
+
+            if (!hasAnyGroupValue) {
+                const labels = groupedFields.map((field) => field.label).join(' or ');
+                return `${labels} is required.`;
+            }
+        }
+
+        return null;
+    };
+
+    const hasMissingRequiredField = () => Boolean(getMissingRequirementMessage());
 
     const handleContinue = () => {
         if (!selectedProvider) {
@@ -48,9 +78,9 @@ export default function InternetPaymentScreen({ navigation, route }: any) {
             return;
         }
 
-        const missingField = serviceConfig.fields.find((field) => !String(formValues[field.key] || '').trim());
-        if (missingField) {
-            Alert.alert('Missing Information', `${missingField.label} is required.`);
+        const missingRequirementMessage = getMissingRequirementMessage();
+        if (missingRequirementMessage) {
+            Alert.alert('Missing Information', missingRequirementMessage);
             return;
         }
 
