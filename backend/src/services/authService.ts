@@ -152,7 +152,7 @@ export const loginUser = async (loginData: any) => {
     };
 
     // Add test OTP in development mode only
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'development') {
         response.testOtp = otp; // For local testing only
     }
 
