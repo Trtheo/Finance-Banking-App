@@ -31,6 +31,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Request logging middleware
+app.use((req: Request, res: Response, next: Function) => {
+  console.log(`📨 ${req.method} ${req.path} - Time: ${new Date().toLocaleTimeString()}`);
+  next();
+});
+
 // Swagger Documentation
 import { swaggerUi, swaggerSpec } from './config/swagger';
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -95,12 +101,14 @@ import walletRoutes from './routes/walletRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import cardRoutes from './routes/cardRoutes';
 import inAppNotificationRoutes from './routes/inAppNotificationRoutes';
+import pushNotificationRoutes from './routes/pushNotificationRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/notifications', inAppNotificationRoutes);
+app.use('/api/push', pushNotificationRoutes);
 
 
 export { app };

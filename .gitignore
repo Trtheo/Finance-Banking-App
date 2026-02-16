@@ -60,3 +60,4 @@ html-cov
 
 # TypeScript
 *.tsbuildinfo
+frontend/node_modules/

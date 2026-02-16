@@ -1,5 +1,6 @@
 import api from './api';
 
+// In-app notification functions
 export const getMyNotifications = async (limit = 50) => {
     const response = await api.get('/notifications', {
         params: { limit },
@@ -26,3 +27,17 @@ export const deleteNotification = async (notificationId: string) => {
     const response = await api.delete(`/notifications/${notificationId}`);
     return response.data;
 };
+
+// Re-export push notification functions
+export {
+    registerForPushNotificationsAsync,
+    registerPushToken,
+    removePushToken,
+    addNotificationReceivedListener,
+    addNotificationResponseReceivedListener,
+    getLastNotificationResponse,
+    scheduleLocalNotification,
+    getBadgeCount,
+    setBadgeCount,
+    clearBadgeCount,
+} from './pushNotificationService';
