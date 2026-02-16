@@ -1,4 +1,5 @@
 import Notification, { NotificationType } from '../models/Notification';
+import { sendPushNotification } from './pushNotification.service';
 
 interface CreateInAppNotificationInput {
     userId: string;
@@ -11,7 +12,8 @@ interface CreateInAppNotificationInput {
 }
 
 export const createInAppNotification = async (input: CreateInAppNotificationInput) => {
-    return await Notification.create({
+    // Create in-app notification
+    const notification = await Notification.create({
         userId: input.userId,
         type: input.type,
         title: input.title,
@@ -20,6 +22,31 @@ export const createInAppNotification = async (input: CreateInAppNotificationInpu
         reference: input.reference,
         cardLast4: input.cardLast4,
     });
+
+    console.log(`📢 In-app notification created for user ${input.userId}`);
+
+    // Send push notification (non-blocking)
+    sendPushNotification({
+        userId: input.userId,
+        title: input.title,
+        body: input.message,
+        data: {
+            type: input.type,
+            amount: input.amount,
+            reference: input.reference,
+            notificationId: notification._id.toString(),
+        },
+    }).then((result) => {
+        if (result.success) {
+            console.log('✅ Push notification sent successfully');
+        } else {
+            console.log(`⚠️ Push notification failed: ${result.reason}`);
+        }
+    }).catch(err => {
+        console.error('❌ Push notification error:', err.message || err);
+    });
+
+    return notification;
 };
 
 export const getUserNotifications = async (userId: string, limit = 50) => {

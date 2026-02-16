@@ -12,6 +12,7 @@ export interface IUser extends Document {
     language?: string;
     loginOtp?: string;
     loginOtpExpires?: Date;
+    pushToken?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const UserSchema: Schema = new Schema(
         language: { type: String },
         loginOtp: { type: String, default: null },
         loginOtpExpires: { type: Date, default: null },
+        pushToken: { type: String, default: null },
     },
     { timestamps: true }
 );

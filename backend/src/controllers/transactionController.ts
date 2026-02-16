@@ -7,14 +7,20 @@ import * as transactionService from '../services/transactionService';
 export const deposit = async (req: any, res: Response) => {
     try {
         const { amount, description, cardId } = req.body;
+        console.log(`💰 Deposit request received - Amount: ${amount}, User: ${req.user.id}`);
+        
         const numericAmount = Number(amount);
         if (!numericAmount || numericAmount <= 0) {
+            console.log('❌ Invalid amount:', amount);
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
+        console.log('📝 Creating deposit transaction...');
         const transaction = await transactionService.createDeposit(req.user.id, numericAmount, description, cardId);
+        console.log('✅ Deposit successful:', transaction._id);
         res.status(201).json(transaction);
     } catch (error: any) {
+        console.error('❌ Deposit error:', error.message);
         res.status(400).json({ message: error.message });
     }
 };
@@ -25,14 +31,20 @@ export const deposit = async (req: any, res: Response) => {
 export const withdraw = async (req: any, res: Response) => {
     try {
         const { amount, description, cardId } = req.body;
+        console.log(`💵 Withdrawal request received - Amount: ${amount}, User: ${req.user.id}`);
+        
         const numericAmount = Number(amount);
         if (!numericAmount || numericAmount <= 0) {
+            console.log('❌ Invalid amount:', amount);
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
+        console.log('📝 Creating withdrawal transaction...');
         const transaction = await transactionService.createWithdrawal(req.user.id, numericAmount, description, cardId);
+        console.log('✅ Withdrawal successful:', transaction._id);
         res.status(201).json(transaction);
     } catch (error: any) {
+        console.error('❌ Withdrawal error:', error.message);
         res.status(400).json({ message: error.message });
     }
 };

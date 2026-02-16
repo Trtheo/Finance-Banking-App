@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Finance Banking App",
+    "slug": "finance-banking-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.financebanking"
+    },
+    "android": {
+      "package": "com.yourcompany.financebanking",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#ffffff",
+          "androidMode": "default"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9386aa17-b683-4d33-8eee-5ea7e410ea7f"
+      }
+    },
+    "owner": "shyaka_aimable"
+  }
+}
