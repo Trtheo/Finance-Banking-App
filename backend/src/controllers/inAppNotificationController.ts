@@ -35,6 +35,20 @@ export const markAllAsRead = async (req: any, res: Response) => {
     }
 };
 
+export const deleteNotification = async (req: any, res: Response) => {
+    try {
+        const deleted = await inAppNotificationService.deleteNotification(req.user.id, req.params.id);
+        
+        if (!deleted) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+        
+        res.status(200).json({ message: 'Notification deleted successfully' });
+    } catch (error: any) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 export const getUnreadCount = async (req: any, res: Response) => {
     try {
         const unreadCount = await inAppNotificationService.getUnreadNotificationCount(req.user.id);

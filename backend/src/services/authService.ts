@@ -1,222 +1,222 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/User';
-import Wallet from '../models/Wallet';
-import Card from '../models/cardModel';
-import { generateAccountNumber } from '../utils/accountNumberGenerator';
-import { sendWelcomeEmail, sendLoginOtp } from './notification.service';
-import { generalOtp } from '../utils/otp';
+// import bcrypt from 'bcryptjs';
+// import jwt from 'jsonwebtoken';
+// import User, { IUser } from '../models/User';
+// import Wallet from '../models/Wallet';
+// import Card from '../models/cardModel';
+// import { generateAccountNumber } from '../utils/accountNumberGenerator';
+// import { sendWelcomeEmail, sendLoginOtp } from './notification.service';
+// import { generalOtp } from '../utils/otp';
 
-// Generate JWT
-const generateToken = (id: string) => {
-    if (!process.env.JWT_SECRET) {
-        throw new Error('JWT_SECRET is not defined');
-    }
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
-    });
-};
+// // Generate JWT
+// const generateToken = (id: string) => {
+//     if (!process.env.JWT_SECRET) {
+//         throw new Error('JWT_SECRET is not defined');
+//     }
+//     return jwt.sign({ id }, process.env.JWT_SECRET, {
+//         expiresIn: '30d',
+//     });
+// };
 
-const generateCardNumber = () =>
-    Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
+// const generateCardNumber = () =>
+//     Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
 
-const generateCVV = () =>
-    Math.floor(100 + Math.random() * 900).toString();
+// const generateCVV = () =>
+//     Math.floor(100 + Math.random() * 900).toString();
 
-const generateUniqueCardNumber = async () => {
-    let cardNumber = generateCardNumber();
-    while (await Card.exists({ cardNumber })) {
-        cardNumber = generateCardNumber();
-    }
-    return cardNumber;
-};
+// const generateUniqueCardNumber = async () => {
+//     let cardNumber = generateCardNumber();
+//     while (await Card.exists({ cardNumber })) {
+//         cardNumber = generateCardNumber();
+//     }
+//     return cardNumber;
+// };
 
-// Register User
-export const registerUser = async (userData: any) => {
-    const { fullName, email, phoneNumber, password, bank } = userData;
+// // Register User
+// export const registerUser = async (userData: any) => {
+//     const { fullName, email, phoneNumber, password, bank } = userData;
 
-    // Check if user exists
-    const userExists = await User.findOne({ $or: [{ email }, { phoneNumber }] });
-    if (userExists) {
-        throw new Error('User already exists with this email or phone number');
-    }
+//     // Check if user exists
+//     const userExists = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+//     if (userExists) {
+//         throw new Error('User already exists with this email or phone number');
+//     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+//     // Hash password
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const user = await User.create({
-        fullName,
-        email,
-        phoneNumber,
-        passwordHash: hashedPassword,
-        primaryBank: bank,
-    });
+//     // Create user
+//     const user = await User.create({
+//         fullName,
+//         email,
+//         phoneNumber,
+//         passwordHash: hashedPassword,
+//         primaryBank: bank,
+//     });
 
-    if (user) {
-        // Create Wallet for the user
-        const accountNumber = generateAccountNumber();
-        const wallet = await Wallet.create({
-            userId: user._id.toString(),
-            accountNumber,
-            balance: 0,
-            currency: 'RWF',
-        });
+//     if (user) {
+//         // Create Wallet for the user
+//         const accountNumber = generateAccountNumber();
+//         const wallet = await Wallet.create({
+//             userId: user._id.toString(),
+//             accountNumber,
+//             balance: 0,
+//             currency: 'RWF',
+//         });
 
-        // Create default Platinum card for the new account
-        const defaultCardNumber = await generateUniqueCardNumber();
-        await Card.create({
-            cardNumber: defaultCardNumber,
-            cvv: generateCVV(),
-            expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
-            cardHolderName: user.fullName,
-            walletId: wallet._id,
-            cardType: 'debit',
-            cardTier: 'PLATINUM',
-            balance: 0,
-            isDefault: true,
-        });
+//         // Create default Platinum card for the new account
+//         const defaultCardNumber = await generateUniqueCardNumber();
+//         await Card.create({
+//             cardNumber: defaultCardNumber,
+//             cvv: generateCVV(),
+//             expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
+//             cardHolderName: user.fullName,
+//             walletId: wallet._id,
+//             cardType: 'debit',
+//             cardTier: 'PLATINUM',
+//             balance: 0,
+//             isDefault: true,
+//         });
 
-        // Send welcome email in the background (non-blocking)
-        sendWelcomeEmail(user.email, user.fullName, accountNumber)
-            .catch((error) => {
-                console.error('⚠️  Welcome email failed (non-critical):', error.message);
-                // Don't propagate error - email is not critical for registration
-            });
+//         // Send welcome email in the background (non-blocking)
+//         sendWelcomeEmail(user.email, user.fullName, accountNumber)
+//             .catch((error) => {
+//                 console.error('⚠️  Welcome email failed (non-critical):', error.message);
+//                 // Don't propagate error - email is not critical for registration
+//             });
 
-        return {
-            _id: user._id.toString(),
-            fullName: user.fullName,
-            email: user.email,
-            token: generateToken(user._id.toString()),
-            message: 'Registration successful! Welcome email may take a moment to arrive.',
-        };
-    } else {
-        throw new Error('Invalid user data');
-    }
-};
+//         return {
+//             _id: user._id.toString(),
+//             fullName: user.fullName,
+//             email: user.email,
+//             token: generateToken(user._id.toString()),
+//             message: 'Registration successful! Welcome email may take a moment to arrive.',
+//         };
+//     } else {
+//         throw new Error('Invalid user data');
+//     }
+// };
 
-// Login User - Request OTP
-export const loginUser = async (loginData: any) => {
-    const { identifier, password } = loginData;
+// // Login User - Request OTP
+// export const loginUser = async (loginData: any) => {
+//     const { identifier, password } = loginData;
 
-    const user = await User.findOne({
-        $or: [{ email: identifier }, { phoneNumber: identifier }]
-    });
+//     const user = await User.findOne({
+//         $or: [{ email: identifier }, { phoneNumber: identifier }]
+//     });
 
-    if (!user) {
-        throw new Error('Invalid email or password');
-    }
+//     if (!user) {
+//         throw new Error('Invalid email or password');
+//     }
 
-    // Check if user has a password hash (account might be corrupted)
-    if (!user.passwordHash) {
-        throw new Error('Account is incomplete. Please register again or contact support.');
-    }
+//     // Check if user has a password hash (account might be corrupted)
+//     if (!user.passwordHash) {
+//         throw new Error('Account is incomplete. Please register again or contact support.');
+//     }
 
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-        throw new Error('Invalid email or password');
-    }
+//     // Verify password
+//     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+//     if (!isPasswordValid) {
+//         throw new Error('Invalid email or password');
+//     }
 
-    // Generate OTP
-    const otp = generalOtp();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+//     // Generate OTP
+//     const otp = generalOtp();
+//     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Save OTP to user
-    await User.findByIdAndUpdate(user._id, {
-        loginOtp: otp,
-        loginOtpExpires: otpExpires,
-    });
+//     // Save OTP to user
+//     await User.findByIdAndUpdate(user._id, {
+//         loginOtp: otp,
+//         loginOtpExpires: otpExpires,
+//     });
 
-    // Send OTP email in the background (non-blocking)
-    // Don't await or throw - we want login to succeed even if email fails
-    console.log('\n' + '='.repeat(50));
-    console.log(`🔥 [DEV] YOUR OTP IS: ${otp} 🔥`);
-    console.log(`For user: ${user.email}`);
-    console.log('='.repeat(50) + '\n');
+//     // Send OTP email in the background (non-blocking)
+//     // Don't await or throw - we want login to succeed even if email fails
+//     console.log('\n' + '='.repeat(50));
+//     console.log(`🔥 [DEV] YOUR OTP IS: ${otp} 🔥`);
+//     console.log(`For user: ${user.email}`);
+//     console.log('='.repeat(50) + '\n');
 
-    sendLoginOtp(user.email, user.fullName, otp)
-        .catch((error) => {
-            console.error('⚠️  OTP email failed (still saved in DB):', error.message);
-            // Email failed but OTP is saved in database for verification
-        });
+//     sendLoginOtp(user.email, user.fullName, otp)
+//         .catch((error) => {
+//             console.error('⚠️  OTP email failed (still saved in DB):', error.message);
+//             // Email failed but OTP is saved in database for verification
+//         });
 
-    // Return immediately with OTP info
-    const response: any = {
-        _id: user._id.toString(),
-        email: user.email,
-        message: 'OTP sent to your email. Please check spam folder if not received.',
-        success: true,
-    };
+//     // Return immediately with OTP info
+//     const response: any = {
+//         _id: user._id.toString(),
+//         email: user.email,
+//         message: 'OTP sent to your email. Please check spam folder if not received.',
+//         success: true,
+//     };
 
-    // Add test OTP in development mode only
-    if (process.env.NODE_ENV !== 'production') {
-        response.testOtp = otp; // For local testing only
-    }
+//     // Add test OTP in development mode only
+//     if (process.env.NODE_ENV !== 'production') {
+//         response.testOtp = otp; // For local testing only
+//     }
 
-    return response;
-};
+//     return response;
+// };
 
-// Verify Login OTP and get token
-export const verifyLoginOtp = async (userId: string, otp: string) => {
-    const user = await User.findById(userId);
+// // Verify Login OTP and get token
+// export const verifyLoginOtp = async (userId: string, otp: string) => {
+//     const user = await User.findById(userId);
 
-    if (!user) {
-        throw new Error('User not found');
-    }
+//     if (!user) {
+//         throw new Error('User not found');
+//     }
 
-    // Check if OTP is valid
-    if (!user.loginOtp || user.loginOtp !== otp) {
-        throw new Error('Invalid OTP');
-    }
+//     // Check if OTP is valid
+//     if (!user.loginOtp || user.loginOtp !== otp) {
+//         throw new Error('Invalid OTP');
+//     }
 
-    // Check if OTP has expired
-    if (!user.loginOtpExpires || new Date() > user.loginOtpExpires) {
-        throw new Error('OTP has expired');
-    }
+//     // Check if OTP has expired
+//     if (!user.loginOtpExpires || new Date() > user.loginOtpExpires) {
+//         throw new Error('OTP has expired');
+//     }
 
-    // Clear OTP
-    await User.findByIdAndUpdate(userId, {
-        loginOtp: null,
-        loginOtpExpires: null,
-    });
+//     // Clear OTP
+//     await User.findByIdAndUpdate(userId, {
+//         loginOtp: null,
+//         loginOtpExpires: null,
+//     });
 
-    return {
-        _id: user._id.toString(),
-        fullName: user.fullName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        token: generateToken(user._id.toString()),
-    };
-};
+//     return {
+//         _id: user._id.toString(),
+//         fullName: user.fullName,
+//         email: user.email,
+//         phoneNumber: user.phoneNumber,
+//         token: generateToken(user._id.toString()),
+//     };
+// };
 
-// Get User Profile
-export const getUserProfile = async (userId: string) => {
-    const user = await User.findById(userId).select('-passwordHash');
-    if (user) {
-        return user;
-    } else {
-        throw new Error('User not found');
-    }
-};
+// // Get User Profile
+// export const getUserProfile = async (userId: string) => {
+//     const user = await User.findById(userId).select('-passwordHash');
+//     if (user) {
+//         return user;
+//     } else {
+//         throw new Error('User not found');
+//     }
+// };
 
-// Update User Profile
-export const updateUserProfile = async (userId: string, updateData: any) => {
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('User not found');
-    }
+// // Update User Profile
+// export const updateUserProfile = async (userId: string, updateData: any) => {
+//     const user = await User.findById(userId);
+//     if (!user) {
+//         throw new Error('User not found');
+//     }
 
-    // Update fields if provided
-    if (updateData.fullName) user.fullName = updateData.fullName;
-    if (updateData.email) user.email = updateData.email;
-    if (updateData.phone) user.phoneNumber = updateData.phone;
-    if (updateData.dateOfBirth) user.dateOfBirth = updateData.dateOfBirth;
-    if (updateData.city) user.city = updateData.city;
-    if (updateData.language) user.language = updateData.language;
+//     // Update fields if provided
+//     if (updateData.fullName) user.fullName = updateData.fullName;
+//     if (updateData.email) user.email = updateData.email;
+//     if (updateData.phone) user.phoneNumber = updateData.phone;
+//     if (updateData.dateOfBirth) user.dateOfBirth = updateData.dateOfBirth;
+//     if (updateData.city) user.city = updateData.city;
+//     if (updateData.language) user.language = updateData.language;
 
-    const updatedUser = await user.save();
-    return updatedUser;
-};
+//     const updatedUser = await user.save();
+//     return updatedUser;
+// };

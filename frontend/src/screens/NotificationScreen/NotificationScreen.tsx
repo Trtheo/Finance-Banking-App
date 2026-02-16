@@ -51,6 +51,17 @@ const formatTime = (dateValue: string) => (
 const NotificationItem = ({ item, onPress, onDelete }: { item: AppNotification; onPress: () => void; onDelete: () => void }) => {
     const icon = getIcon(item.type);
 
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Notification',
+            'Are you sure you want to delete this notification?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: onDelete }
+            ]
+        );
+    };
+
     return (
         <TouchableOpacity
             style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
@@ -64,7 +75,12 @@ const NotificationItem = ({ item, onPress, onDelete }: { item: AppNotification; 
             <View style={styles.contentContainer}>
                 <View style={styles.headerRow}>
                     <Text style={styles.notificationTitle}>{item.title}</Text>
-                    <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
+                    <View style={styles.actionRow}>
+                        <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
+                        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+                            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <Text style={styles.notificationMessage}>{item.message}</Text>
@@ -182,6 +198,17 @@ export default function NotificationScreen({ navigation }: any) {
         } catch (error: any) {
             setNotifications(previousNotifications);
             Alert.alert('Error', error.response?.data?.message || 'Failed to mark all notifications as read');
+        }
+    };
+
+    const deleteNotification = async (notificationId: string) => {
+        setNotifications(prev => prev.filter(item => item._id !== notificationId));
+        
+        try {
+            await notificationService.deleteNotification(notificationId);
+        } catch (error: any) {
+            await fetchNotifications(false);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to delete notification');
         }
     };
 
@@ -375,6 +402,15 @@ const styles = StyleSheet.create({
     timeText: {
         fontSize: 12,
         color: '#999',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    deleteButton: {
+        padding: 4,
+        borderRadius: 4,
     },
     notificationMessage: {
         fontSize: 14,
