@@ -7,10 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as walletService from '../services/walletService';
-import * as transactionService from '../services/transactionService';
-import * as authService from '../services/authService';
-import * as notificationService from '../services/notificationService';
+import * as walletService from '../../services/walletService';
+import * as transactionService from '../../services/transactionService';
+import * as authService from '../../services/authService';
+import * as notificationService from '../../services/notificationService';
 
 const maskAccountNumber = (accountNumber?: string) => {
     const clean = String(accountNumber || '').replace(/\s/g, '');

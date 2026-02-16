@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as transactionService from '../services/transactionService';
-import * as walletService from '../services/walletService';
+import * as transactionService from '../../services/transactionService';
+import * as walletService from '../../services/walletService';
 
 export default function WithdrawScreen({ navigation }: any) {
     const [amount, setAmount] = useState('');

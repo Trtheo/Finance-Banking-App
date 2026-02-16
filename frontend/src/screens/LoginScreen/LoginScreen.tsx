@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import * as authService from '../services/authService';
+import * as authService from '../../services/authService';
 import { Alert } from 'react-native';
 
 // @ts-ignore

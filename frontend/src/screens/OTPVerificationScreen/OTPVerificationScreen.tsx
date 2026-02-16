@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as authService from '../services/authService';
-import * as transactionService from '../services/transactionService';
+import * as authService from '../../services/authService';
+import * as transactionService from '../../services/transactionService';
 
 // @ts-ignore
 export default function OTPVerificationScreen({ navigation, route }) {

@@ -26,7 +26,7 @@ const RWANDA_BANKS = [
     { id: 'cogebanque', name: 'Cogebanque' },
 ];
 
-import * as authService from '../services/authService';
+import * as authService from '../../services/authService';
 
 // @ts-ignore
 export default function RegistrationScreen({ navigation }) {

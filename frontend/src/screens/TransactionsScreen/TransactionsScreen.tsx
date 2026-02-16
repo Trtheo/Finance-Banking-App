@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicato
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import * as transactionService from '../services/transactionService';
-import * as authService from '../services/authService';
+import * as transactionService from '../../services/transactionService';
+import * as authService from '../../services/authService';
 
 const TransactionItem = ({ item }: any) => {
   const isIncome = item.direction === 'income';

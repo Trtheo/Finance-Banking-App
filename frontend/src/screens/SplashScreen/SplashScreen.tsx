@@ -48,6 +48,7 @@ const slides: Slide[] = [
     subtitle:
       "Experience effortless money management with a modern design that keeps everything organized.",
     transactions: true,
+    cards: false,
   },
 ];
 
