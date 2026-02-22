@@ -61,7 +61,7 @@ export const sendPushNotification = async (input: PushNotificationInput) => {
             body: JSON.stringify(message),
         });
 
-        const result = await response.json();
+        const result: any = await response.json();
         
         console.log(`📥 Expo API Response:`, JSON.stringify(result));
 
