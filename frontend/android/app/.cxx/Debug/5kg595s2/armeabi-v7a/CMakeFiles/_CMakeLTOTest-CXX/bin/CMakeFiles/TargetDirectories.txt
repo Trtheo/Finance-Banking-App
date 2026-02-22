@@ -1,0 +1,4 @@
+/home/theophile/Documents/KLAB_ACADEMY_2026/Banking-app/Banking-mobile-app/frontend/android/app/.cxx/Debug/5kg595s2/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+/home/theophile/Documents/KLAB_ACADEMY_2026/Banking-app/Banking-mobile-app/frontend/android/app/.cxx/Debug/5kg595s2/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+/home/theophile/Documents/KLAB_ACADEMY_2026/Banking-app/Banking-mobile-app/frontend/android/app/.cxx/Debug/5kg595s2/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+/home/theophile/Documents/KLAB_ACADEMY_2026/Banking-app/Banking-mobile-app/frontend/android/app/.cxx/Debug/5kg595s2/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir
