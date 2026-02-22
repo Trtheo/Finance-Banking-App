@@ -1,38 +1,30 @@
 {
   "expo": {
-    "name": "Finance Banking App",
-    "slug": "finance-banking-app",
+    "name": "frontend",
+    "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.financebanking"
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.yourcompany.financebanking",
-      "permissions": [
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
-      ]
-    },
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "color": "#ffffff",
-          "androidMode": "default"
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "9386aa17-b683-4d33-8eee-5ea7e410ea7f"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       }
     },
-    "owner": "shyaka_aimable"
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }

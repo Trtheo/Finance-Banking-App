@@ -6,11 +6,11 @@
   "type": "commonjs",
   "scripts": {
     "dev": "npx nodemon --exec npx ts-node ./src/server.ts",
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "npx ts-node ./src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Theophile",
+  "author": "SHYAKA Aimable",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",

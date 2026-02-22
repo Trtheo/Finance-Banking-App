@@ -1,11 +1,12 @@
 {
-  "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "jsonwebtoken": "^9.0.3"
+  "name": "banking-mobile-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/nodemailer": "^7.0.9"
-  }
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
