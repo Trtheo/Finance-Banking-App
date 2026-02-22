@@ -111,4 +111,4 @@ app.use('/api/notifications', inAppNotificationRoutes);
 app.use('/api/push', pushNotificationRoutes);
 
 
-export { app };
+export default app;

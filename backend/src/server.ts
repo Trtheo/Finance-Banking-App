@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { app } from './app';
+import app from './app';
 import connectDB from './config/db';
 import notificationRoutes from "./routes/notification.routes";
 
