@@ -13,6 +13,7 @@ const allowedOrigins = [
   'http://192.168.1.169:5000',
   'https://banking-mobile-app.onrender.com',
   'https://banking-mobile-app-staging.onrender.com',
+  'https://finance-banking-app-1.onrender.com',
 ];
 
 const corsOptions = {
